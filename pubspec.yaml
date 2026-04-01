@@ -1,0 +1,113 @@
+name: tuish_food
+description: "Tuish Food - A full-featured food delivery application with customer, delivery partner, and admin roles."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: any
+
+  # Firebase
+  firebase_core: any
+  firebase_auth: any
+  cloud_firestore: any
+  firebase_storage: any
+  firebase_messaging: any
+  firebase_analytics: any
+  cloud_functions: any
+
+  # State Management
+  flutter_riverpod: any
+  riverpod_annotation: any
+
+  # Routing
+  go_router: any
+
+  # Maps & Location
+  google_maps_flutter: any
+  geolocator: any
+
+  # Networking & Connectivity
+  connectivity_plus: any
+
+  # UI Components
+  cached_network_image: any
+  flutter_svg: any
+  shimmer: any
+  flutter_rating_bar: any
+  lottie: any
+  fl_chart: any
+  badges: any
+  image_picker: any
+  image_cropper: any
+
+  # Local Storage
+  shared_preferences: any
+  hive_flutter: any
+
+  # Payments
+  flutter_stripe: any
+
+  # Notifications
+  flutter_local_notifications: any
+
+  # Utilities
+  intl: any
+  url_launcher: any
+  share_plus: any
+  permission_handler: any
+  uuid: any
+  freezed_annotation: any
+  json_annotation: any
+  equatable: any
+  dartz: any
+  rxdart: any
+  timeago: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: any
+  riverpod_generator: any
+  build_runner: any
+  freezed: any
+  json_serializable: any
+  mockito: any
+  mocktail: any
+
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

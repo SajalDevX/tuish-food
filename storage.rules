@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================================
+    // Helper Functions
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+
+    function isImageType() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    function isUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // ============================================================
+    // User Files
+    // ============================================================
+
+    match /users/{userId}/{allPaths=**} {
+      // Users can read their own files; admins can read any
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can write their own files (images only, max 5MB)
+      allow write: if isOwner(userId) && isImageType() && isUnder5MB();
+    }
+
+    // User profile photos are publicly readable
+    match /users/{userId}/profile/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) && isImageType() && isUnder5MB();
+    }
+
+    // Delivery partner documents (max 10MB for scanned docs)
+    match /users/{userId}/documents/{fileName} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && isUnder10MB();
+    }
+
+    // ============================================================
+    // Restaurant Files
+    // ============================================================
+
+    match /restaurants/{restaurantId}/{allPaths=**} {
+      // All authenticated users can view restaurant images
+      allow read: if isAuthenticated();
+
+      // Only admins can upload restaurant images
+      allow write: if isAdmin() && isImageType() && isUnder5MB();
+    }
+
+    // ============================================================
+    // Review Photos
+    // ============================================================
+
+    match /reviews/{reviewId}/{fileName} {
+      // All authenticated users can view review photos
+      allow read: if isAuthenticated();
+
+      // Only the review author can upload (max 5MB, images only)
+      allow write: if isAuthenticated() && isImageType() && isUnder5MB();
+    }
+
+    // ============================================================
+    // Chat Images
+    // ============================================================
+
+    match /chat/{chatId}/{fileName} {
+      // Authenticated users can read chat images
+      allow read: if isAuthenticated();
+
+      // Authenticated users can upload chat images
+      allow write: if isAuthenticated() && isImageType() && isUnder5MB();
+    }
+
+    // ============================================================
+    // Promotion Banners
+    // ============================================================
+
+    match /promotions/{promotionId}/{fileName} {
+      // All authenticated users can view promotion banners
+      allow read: if isAuthenticated();
+
+      // Only admins can upload
+      allow write: if isAdmin() && isImageType() && isUnder5MB();
+    }
+  }
+}

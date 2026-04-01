@@ -1,0 +1,217 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // Helper Functions
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isDeliveryPartner() {
+      return hasRole('deliveryPartner');
+    }
+
+    function isCustomer() {
+      return hasRole('customer');
+    }
+
+    // ============================================================
+    // Users Collection
+    // ============================================================
+
+    match /users/{userId} {
+      // Users can read their own profile; admins can read any
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can update their own profile (excluding role, isBanned)
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isBanned', 'isVerified']);
+
+      // Only Cloud Functions create user documents (via auth trigger)
+      allow create: if false;
+      allow delete: if false;
+
+      // Addresses subcollection
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ============================================================
+    // Restaurants Collection
+    // ============================================================
+
+    match /restaurants/{restaurantId} {
+      // Anyone authenticated can read active restaurants
+      allow read: if isAuthenticated();
+
+      // Only admins can create, update, delete
+      allow create, update, delete: if isAdmin();
+
+      // Menu Categories subcollection
+      match /menuCategories/{categoryId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isAdmin();
+      }
+
+      // Menu Items subcollection
+      match /menuItems/{itemId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // ============================================================
+    // Orders Collection
+    // ============================================================
+
+    match /orders/{orderId} {
+      // Customers can read their own orders
+      // Delivery partners can read orders assigned to them
+      // Admins can read all orders
+      allow read: if isAdmin()
+        || (isAuthenticated() && resource.data.customerId == request.auth.uid)
+        || (isAuthenticated() && resource.data.deliveryPartnerId == request.auth.uid);
+
+      // Customers can create orders
+      allow create: if isCustomer()
+        && request.resource.data.customerId == request.auth.uid;
+
+      // Customers can cancel their own orders (only status and cancellation fields)
+      // Delivery partners can update status of assigned orders
+      // Admins can update any order
+      allow update: if isAdmin()
+        || (isCustomer() && resource.data.customerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'statusHistory', 'cancellationReason', 'cancelledBy', 'updatedAt']))
+        || (isDeliveryPartner() && resource.data.deliveryPartnerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'statusHistory', 'actualDeliveryTime', 'updatedAt']));
+
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // Reviews Collection
+    // ============================================================
+
+    match /reviews/{reviewId} {
+      // Anyone authenticated can read reviews
+      allow read: if isAuthenticated();
+
+      // Customers can create reviews for their own orders
+      allow create: if isCustomer()
+        && request.resource.data.reviewerId == request.auth.uid;
+
+      // Customers can update their own reviews; admins can update any (for moderation)
+      allow update: if isAdmin()
+        || (isCustomer() && resource.data.reviewerId == request.auth.uid);
+
+      // Only admins can delete reviews
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // Delivery Locations Collection (Real-time GPS)
+    // ============================================================
+
+    match /delivery_locations/{partnerId} {
+      // Customers can read delivery location for their active orders
+      // Delivery partners can read/write their own location
+      // Admins can read all
+      allow read: if isAuthenticated();
+
+      allow write: if isDeliveryPartner() && request.auth.uid == partnerId;
+    }
+
+    // ============================================================
+    // Chats Collection
+    // ============================================================
+
+    match /chats/{chatId} {
+      // Only participants can read/write
+      allow read, write: if isAuthenticated()
+        && request.auth.uid in resource.data.participants;
+
+      allow create: if isAuthenticated();
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated()
+          && request.resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // ============================================================
+    // Earnings Collection
+    // ============================================================
+
+    match /earnings/{earningsId} {
+      // Delivery partners can read their own earnings; admins can read all
+      allow read: if isAdmin()
+        || (isDeliveryPartner() && resource.data.deliveryPartnerId == request.auth.uid);
+
+      // Only Cloud Functions write earnings
+      allow write: if false;
+    }
+
+    // ============================================================
+    // Promotions Collection
+    // ============================================================
+
+    match /promotions/{promotionId} {
+      // All authenticated users can read active promotions
+      allow read: if isAuthenticated();
+
+      // Only admins can manage promotions
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // Notifications Collection
+    // ============================================================
+
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      // Users can update their own (mark as read)
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+      // Only Cloud Functions create notifications
+      allow create: if false;
+      allow delete: if false;
+    }
+
+    // ============================================================
+    // App Config Collection (Singleton)
+    // ============================================================
+
+    match /app_config/{document} {
+      // All authenticated users can read app config
+      allow read: if isAuthenticated();
+
+      // Only admins can update
+      allow write: if isAdmin();
+    }
+  }
+}

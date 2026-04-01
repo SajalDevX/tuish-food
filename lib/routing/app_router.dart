@@ -1,0 +1,553 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:tuish_food/core/enums/user_role.dart';
+import 'package:tuish_food/features/customer/cart/presentation/screens/cart_screen.dart';
+import 'package:tuish_food/features/customer/checkout/presentation/screens/address_selection_screen.dart';
+import 'package:tuish_food/features/customer/checkout/presentation/screens/checkout_screen.dart';
+import 'package:tuish_food/features/customer/checkout/presentation/screens/order_confirmation_screen.dart';
+import 'package:tuish_food/features/customer/checkout/presentation/screens/payment_method_screen.dart';
+import 'package:tuish_food/features/customer/home/presentation/screens/customer_home_screen.dart';
+import 'package:tuish_food/features/customer/home/presentation/screens/restaurant_detail_screen.dart';
+import 'package:tuish_food/features/customer/home/presentation/screens/search_screen.dart';
+import 'package:tuish_food/features/customer/orders/presentation/screens/order_detail_screen.dart';
+import 'package:tuish_food/features/customer/orders/presentation/screens/orders_list_screen.dart';
+import 'package:tuish_food/features/customer/profile/presentation/screens/add_address_screen.dart';
+import 'package:tuish_food/features/customer/profile/presentation/screens/addresses_screen.dart';
+import 'package:tuish_food/features/customer/profile/presentation/screens/edit_profile_screen.dart';
+import 'package:tuish_food/features/customer/profile/presentation/screens/profile_screen.dart';
+import 'package:tuish_food/features/customer/profile/presentation/screens/settings_screen.dart';
+import 'package:tuish_food/features/customer/reviews/presentation/screens/write_review_screen.dart';
+import 'package:tuish_food/features/customer/tracking/presentation/screens/live_tracking_screen.dart';
+import 'package:tuish_food/features/admin/dashboard/presentation/screens/admin_dashboard_screen.dart';
+import 'package:tuish_food/features/admin/order_management/presentation/screens/all_orders_screen.dart';
+import 'package:tuish_food/features/admin/order_management/presentation/screens/order_dispute_screen.dart';
+import 'package:tuish_food/features/admin/promotions/presentation/screens/create_promotion_screen.dart';
+import 'package:tuish_food/features/admin/promotions/presentation/screens/promotions_screen.dart';
+import 'package:tuish_food/features/admin/restaurant_management/presentation/screens/add_restaurant_screen.dart';
+import 'package:tuish_food/features/admin/restaurant_management/presentation/screens/edit_restaurant_screen.dart';
+import 'package:tuish_food/features/admin/restaurant_management/presentation/screens/menu_management_screen.dart';
+import 'package:tuish_food/features/admin/settings/presentation/screens/admin_settings_screen.dart';
+import 'package:tuish_food/features/admin/restaurant_management/presentation/screens/restaurants_list_screen.dart';
+import 'package:tuish_food/features/admin/user_management/presentation/screens/delivery_partners_screen.dart';
+import 'package:tuish_food/features/admin/user_management/presentation/screens/user_detail_screen.dart';
+import 'package:tuish_food/features/admin/user_management/presentation/screens/users_list_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/login_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/phone_verification_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/register_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/role_selection_screen.dart';
+import 'package:tuish_food/features/auth/presentation/screens/splash_screen.dart';
+import 'package:tuish_food/features/delivery/dashboard/presentation/screens/active_delivery_screen.dart';
+import 'package:tuish_food/features/delivery/dashboard/presentation/screens/available_orders_screen.dart';
+import 'package:tuish_food/features/delivery/dashboard/presentation/screens/delivery_home_screen.dart';
+import 'package:tuish_food/features/delivery/earnings/presentation/screens/earnings_screen.dart';
+import 'package:tuish_food/features/delivery/navigation/presentation/screens/delivery_navigation_screen.dart';
+import 'package:tuish_food/features/delivery/profile/presentation/screens/delivery_profile_screen.dart';
+import 'package:tuish_food/features/shared/chat/presentation/screens/chat_screen.dart';
+import 'package:tuish_food/features/shared/notifications/presentation/screens/notifications_screen.dart';
+import 'package:tuish_food/injection_container.dart';
+import 'package:tuish_food/routing/route_names.dart';
+import 'package:tuish_food/routing/route_paths.dart';
+import 'package:tuish_food/routing/shell_routes/admin_shell.dart';
+import 'package:tuish_food/routing/shell_routes/customer_shell.dart';
+import 'package:tuish_food/routing/shell_routes/delivery_shell.dart';
+
+// ---------------------------------------------------------------------------
+// User role provider
+// ---------------------------------------------------------------------------
+
+/// Reads the custom claims from the current Firebase Auth user's ID token
+/// and returns the corresponding [UserRole], or null if unauthenticated /
+/// no role claim is set.
+final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+
+  final idTokenResult = await user.getIdTokenResult();
+  final roleClaim = idTokenResult.claims?['role'] as String?;
+  return UserRole.fromString(roleClaim);
+});
+
+// ---------------------------------------------------------------------------
+// Router provider
+// ---------------------------------------------------------------------------
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
+  final roleAsync = ref.watch(currentUserRoleProvider);
+
+  return GoRouter(
+    initialLocation: RoutePaths.splash,
+    debugLogDiagnostics: true,
+
+    // -------------------------------------------------------------------
+    // Global redirect
+    // -------------------------------------------------------------------
+    redirect: (context, state) {
+      final isLoggedIn = authState.value != null;
+      final currentPath = state.uri.toString();
+      final isAuthRoute = currentPath.startsWith(RoutePaths.auth) ||
+          currentPath == RoutePaths.splash;
+
+      // 1. Not logged in and not on an auth page -> redirect to login
+      if (!isLoggedIn && !isAuthRoute) {
+        return RoutePaths.login;
+      }
+
+      // 2. Logged in and on an auth page -> redirect to role-appropriate home
+      if (isLoggedIn && isAuthRoute) {
+        final role = roleAsync.value;
+        return _homePathForRole(role);
+      }
+
+      // 3. Role-based protection
+      if (isLoggedIn) {
+        final role = roleAsync.value;
+
+        if (currentPath.startsWith('/customer') &&
+            role != UserRole.customer &&
+            role != null) {
+          return _homePathForRole(role);
+        }
+        if (currentPath.startsWith('/delivery') &&
+            role != UserRole.deliveryPartner &&
+            role != null) {
+          return _homePathForRole(role);
+        }
+        if (currentPath.startsWith('/admin') &&
+            role != UserRole.admin &&
+            role != null) {
+          return _homePathForRole(role);
+        }
+      }
+
+      return null; // No redirect
+    },
+
+    // -------------------------------------------------------------------
+    // Routes
+    // -------------------------------------------------------------------
+    routes: [
+      // ---- Auth routes (no shell) ----
+      GoRoute(
+        path: RoutePaths.splash,
+        name: RouteNames.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.login,
+        name: RouteNames.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.register,
+        name: RouteNames.register,
+        builder: (context, state) =>
+            const RegisterScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.phoneVerify,
+        name: RouteNames.phoneVerify,
+        builder: (context, state) =>
+            const PhoneVerificationScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.forgotPassword,
+        name: RouteNames.forgotPassword,
+        builder: (context, state) =>
+            const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.roleSelection,
+        name: RouteNames.roleSelection,
+        builder: (context, state) =>
+            const RoleSelectionScreen(),
+      ),
+
+      // ---- Checkout routes (full screen, no shell) ----
+      GoRoute(
+        path: RoutePaths.checkout,
+        name: RouteNames.checkout,
+        builder: (context, state) => const CheckoutScreen(),
+        routes: [
+          GoRoute(
+            path: 'address',
+            name: RouteNames.checkoutAddress,
+            builder: (context, state) => const AddressSelectionScreen(),
+          ),
+          GoRoute(
+            path: 'payment',
+            name: RouteNames.checkoutPayment,
+            builder: (context, state) => const PaymentMethodScreen(),
+          ),
+          GoRoute(
+            path: 'confirmation/:orderId',
+            name: RouteNames.orderConfirmation,
+            builder: (context, state) {
+              final orderId = state.pathParameters['orderId']!;
+              return OrderConfirmationScreen(orderId: orderId);
+            },
+          ),
+        ],
+      ),
+
+      // ---- Customer shell (bottom nav) ----
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return CustomerShell(navigationShell: navigationShell);
+        },
+        branches: [
+          // Branch 0: Home
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.customerHome,
+                name: RouteNames.customerHome,
+                builder: (context, state) =>
+                    const CustomerHomeScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'restaurant/:id',
+                    name: RouteNames.restaurantDetail,
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return RestaurantDetailScreen(restaurantId: id);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'search',
+                    name: RouteNames.search,
+                    builder: (context, state) =>
+                        const SearchScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 1: Orders
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.customerOrders,
+                name: RouteNames.customerOrders,
+                builder: (context, state) =>
+                    const OrdersListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':orderId',
+                    name: RouteNames.orderDetail,
+                    builder: (context, state) {
+                      final orderId = state.pathParameters['orderId']!;
+                      return OrderDetailScreen(orderId: orderId);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'tracking',
+                        name: RouteNames.orderTracking,
+                        builder: (context, state) {
+                          final orderId = state.pathParameters['orderId']!;
+                          return LiveTrackingScreen(orderId: orderId);
+                        },
+                      ),
+                      GoRoute(
+                        path: 'review',
+                        name: RouteNames.orderReview,
+                        builder: (context, state) {
+                          final orderId = state.pathParameters['orderId']!;
+                          return WriteReviewScreen(orderId: orderId);
+                        },
+                      ),
+                      GoRoute(
+                        path: 'chat',
+                        name: RouteNames.orderChat,
+                        builder: (context, state) {
+                          return ChatScreen(
+                            chatId: state.pathParameters['orderId'] ?? '',
+                            otherUserName: 'Chat',
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Cart
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.customerCart,
+                name: RouteNames.customerCart,
+                builder: (context, state) => const CartScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 3: Profile
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.customerProfile,
+                name: RouteNames.customerProfile,
+                builder: (context, state) =>
+                    const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: RouteNames.editProfile,
+                    builder: (context, state) =>
+                        const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'addresses',
+                    name: RouteNames.addresses,
+                    builder: (context, state) =>
+                        const AddressesScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'add',
+                        name: RouteNames.addAddress,
+                        builder: (context, state) =>
+                            const AddAddressScreen(),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    name: RouteNames.customerSettings,
+                    builder: (context, state) =>
+                        const SettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    name: RouteNames.customerNotifications,
+                    builder: (context, state) =>
+                        const NotificationsScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // ---- Delivery partner shell (bottom nav) ----
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return DeliveryShell(navigationShell: navigationShell);
+        },
+        branches: [
+          // Branch 0: Home
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.deliveryHome,
+                name: RouteNames.deliveryHome,
+                builder: (context, state) =>
+                    const DeliveryHomeScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 1: Orders
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.deliveryOrders,
+                name: RouteNames.deliveryOrders,
+                builder: (context, state) =>
+                    const AvailableOrdersScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':orderId',
+                    name: RouteNames.deliveryOrderDetail,
+                    builder: (context, state) {
+                      return ActiveDeliveryScreen(
+                        orderId: state.pathParameters['orderId'] ?? '',
+                      );
+                    },
+                    routes: [
+                      GoRoute(
+                        path: 'navigate',
+                        name: RouteNames.deliveryNavigation,
+                        builder: (context, state) {
+                          return DeliveryNavigationScreen(
+                            orderId: state.pathParameters['orderId'] ?? '',
+                          );
+                        },
+                      ),
+                      GoRoute(
+                        path: 'chat',
+                        name: RouteNames.deliveryChat,
+                        builder: (context, state) {
+                          return ChatScreen(
+                            chatId: state.pathParameters['orderId'] ?? '',
+                            otherUserName: 'Chat',
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Earnings
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.deliveryEarnings,
+                name: RouteNames.deliveryEarnings,
+                builder: (context, state) =>
+                    const EarningsScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 3: Profile
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.deliveryProfile,
+                name: RouteNames.deliveryProfile,
+                builder: (context, state) =>
+                    const DeliveryProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // ---- Admin shell (drawer navigation) ----
+      ShellRoute(
+        builder: (context, state, child) {
+          return AdminShell(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: RoutePaths.adminDashboard,
+            name: RouteNames.adminDashboard,
+            builder: (context, state) =>
+                const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: RoutePaths.adminRestaurants,
+            name: RouteNames.adminRestaurants,
+            builder: (context, state) =>
+                const RestaurantsListScreen(),
+            routes: [
+              GoRoute(
+                path: 'add',
+                name: RouteNames.addRestaurant,
+                builder: (context, state) =>
+                    const AddRestaurantScreen(),
+              ),
+              GoRoute(
+                path: ':id/edit',
+                name: RouteNames.editRestaurant,
+                builder: (context, state) {
+                  return EditRestaurantScreen(
+                    restaurantId: state.pathParameters['id'] ?? '',
+                  );
+                },
+              ),
+              GoRoute(
+                path: ':id/menu',
+                name: RouteNames.restaurantMenu,
+                builder: (context, state) {
+                  return MenuManagementScreen(
+                    restaurantId: state.pathParameters['id'] ?? '',
+                  );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.adminUsers,
+            name: RouteNames.adminUsers,
+            builder: (context, state) =>
+                const UsersListScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                name: RouteNames.adminUserDetail,
+                builder: (context, state) {
+                  return UserDetailScreen(
+                    userId: state.pathParameters['id'] ?? '',
+                  );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.adminDeliveryPartners,
+            name: RouteNames.adminDeliveryPartners,
+            builder: (context, state) =>
+                const DeliveryPartnersScreen(),
+          ),
+          GoRoute(
+            path: RoutePaths.adminOrders,
+            name: RouteNames.adminOrders,
+            builder: (context, state) =>
+                const AllOrdersScreen(),
+            routes: [
+              GoRoute(
+                path: ':orderId',
+                name: RouteNames.adminOrderDetail,
+                builder: (context, state) {
+                  return OrderDisputeScreen(
+                    orderId: state.pathParameters['orderId'] ?? '',
+                  );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.adminPromotions,
+            name: RouteNames.adminPromotions,
+            builder: (context, state) =>
+                const PromotionsScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: RouteNames.createPromotion,
+                builder: (context, state) =>
+                    const CreatePromotionScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.adminSettings,
+            name: RouteNames.adminSettings,
+            builder: (context, state) =>
+                const AdminSettingsScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Returns the home path for the given role, defaulting to customer home
+/// when the role is not yet determined.
+String _homePathForRole(UserRole? role) {
+  return switch (role) {
+    UserRole.customer => RoutePaths.customerHome,
+    UserRole.deliveryPartner => RoutePaths.deliveryHome,
+    UserRole.admin => RoutePaths.adminDashboard,
+    null => RoutePaths.customerHome,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Placeholder screen
+// ---------------------------------------------------------------------------

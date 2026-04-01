@@ -1,0 +1,43 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tuish_food/core/enums/payment_status.dart';
+import 'package:tuish_food/features/customer/checkout/domain/entities/payment.dart';
+
+class PaymentModel extends Payment {
+  const PaymentModel({
+    required super.id,
+    required super.method,
+    required super.status,
+    required super.amount,
+    super.transactionId,
+  });
+
+  factory PaymentModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return PaymentModel(
+      id: doc.id,
+      method: PaymentMethod.fromString(data['method'] as String? ?? ''),
+      status: PaymentStatus.fromString(data['status'] as String? ?? 'pending'),
+      amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+      transactionId: data['transactionId'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'method': method.firestoreValue,
+      'status': status.firestoreValue,
+      'amount': amount,
+      'transactionId': transactionId,
+    };
+  }
+
+  factory PaymentModel.fromEntity(Payment payment) {
+    return PaymentModel(
+      id: payment.id,
+      method: payment.method,
+      status: payment.status,
+      amount: payment.amount,
+      transactionId: payment.transactionId,
+    );
+  }
+}
