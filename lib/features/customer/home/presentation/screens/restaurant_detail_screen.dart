@@ -25,7 +25,6 @@ class RestaurantDetailScreen extends ConsumerWidget {
     final restaurantAsync = ref.watch(restaurantDetailProvider(restaurantId));
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: restaurantAsync.when(
         data: (restaurant) => _buildContent(context, restaurant),
         loading: () => _buildLoadingState(),
@@ -45,7 +44,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
           leading: Padding(
             padding: const EdgeInsets.all(AppSizes.s8),
             child: CircleAvatar(
-              backgroundColor: AppColors.cardBackground.withValues(alpha: 0.9),
+              backgroundColor: Theme.of(context).cardColor.withValues(alpha: 0.9),
               child: IconButton(
                 icon: const Icon(
                   Icons.arrow_back_ios_new_rounded,
@@ -87,7 +86,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(right: AppSizes.s8),
               child: CircleAvatar(
                 backgroundColor:
-                    AppColors.cardBackground.withValues(alpha: 0.9),
+                    Theme.of(context).cardColor.withValues(alpha: 0.9),
                 child: IconButton(
                   icon: const Icon(
                     Icons.share_outlined,
@@ -106,7 +105,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
         // ---- Restaurant Info ----
         SliverToBoxAdapter(
           child: Container(
-            color: AppColors.cardBackground,
+            color: Theme.of(context).cardColor,
             padding: AppSizes.paddingAllM,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,7 +244,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
         if (restaurant.description.isNotEmpty)
           SliverToBoxAdapter(
             child: Container(
-              color: AppColors.cardBackground,
+              color: Theme.of(context).cardColor,
               padding: AppSizes.paddingAllM,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,7 +270,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
         if (restaurant.operatingHours.isNotEmpty)
           SliverToBoxAdapter(
             child: Container(
-              color: AppColors.cardBackground,
+              color: Theme.of(context).cardColor,
               padding: AppSizes.paddingAllM,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,7 +313,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
         // ---- Reviews Preview ----
         SliverToBoxAdapter(
           child: Container(
-            color: AppColors.cardBackground,
+            color: Theme.of(context).cardColor,
             padding: AppSizes.paddingAllM,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +369,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
 
         SliverToBoxAdapter(
           child: Container(
-            color: AppColors.cardBackground,
+            color: Theme.of(context).cardColor,
             padding: AppSizes.paddingAllM,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

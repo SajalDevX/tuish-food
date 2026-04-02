@@ -26,7 +26,7 @@ class RestaurantCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSizes.s12),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: Theme.of(context).cardColor,
           borderRadius: AppSizes.borderRadiusM,
           boxShadow: [
             BoxShadow(
@@ -61,7 +61,7 @@ class RestaurantCard extends StatelessWidget {
                       vertical: AppSizes.s4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
+                      color: Theme.of(context).cardColor,
                       borderRadius: AppSizes.borderRadiusS,
                       boxShadow: [
                         BoxShadow(
@@ -107,7 +107,7 @@ class RestaurantCard extends StatelessWidget {
                           vertical: AppSizes.s8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.cardBackground,
+                          color: Theme.of(context).cardColor,
                           borderRadius: AppSizes.borderRadiusS,
                         ),
                         child: Text(

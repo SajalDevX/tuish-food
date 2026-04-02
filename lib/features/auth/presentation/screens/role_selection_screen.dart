@@ -37,6 +37,8 @@ class RoleSelectionScreen extends ConsumerWidget {
             context.go(RoutePaths.customerHome);
           case UserRole.deliveryPartner:
             context.go(RoutePaths.deliveryHome);
+          case UserRole.restaurantOwner:
+            context.go(RoutePaths.restaurantDashboard);
           case UserRole.admin:
             context.go(RoutePaths.adminDashboard);
         }
@@ -86,7 +88,26 @@ class RoleSelectionScreen extends ConsumerWidget {
                 },
               ),
 
-              const SizedBox(height: AppSizes.s20),
+              const SizedBox(height: AppSizes.s16),
+
+              // Restaurant owner card
+              _RoleCard(
+                icon: Icons.storefront_rounded,
+                title: 'I Own a Restaurant',
+                subtitle: 'Register your restaurant and manage orders',
+                color: AppColors.warning,
+                isLoading: isLoading,
+                onTap: () {
+                  if (authState is Authenticated) {
+                    ref.read(authNotifierProvider.notifier).updateUserRole(
+                          authState.user.uid,
+                          UserRole.restaurantOwner,
+                        );
+                  }
+                },
+              ),
+
+              const SizedBox(height: AppSizes.s16),
 
               // Delivery partner card
               _RoleCard(

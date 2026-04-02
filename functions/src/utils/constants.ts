@@ -69,6 +69,7 @@ export type OrderStatus = (typeof OrderStatuses)[keyof typeof OrderStatuses];
 export const UserRoles = {
   CUSTOMER: "customer",
   DELIVERY_PARTNER: "deliveryPartner",
+  RESTAURANT_OWNER: "restaurantOwner",
   ADMIN: "admin",
 } as const;
 

@@ -35,6 +35,7 @@ import 'package:tuish_food/features/admin/user_management/presentation/screens/u
 import 'package:tuish_food/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/login_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/phone_verification_screen.dart';
+import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
 import 'package:tuish_food/features/auth/presentation/screens/register_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/splash_screen.dart';
@@ -46,35 +47,27 @@ import 'package:tuish_food/features/delivery/navigation/presentation/screens/del
 import 'package:tuish_food/features/delivery/profile/presentation/screens/delivery_profile_screen.dart';
 import 'package:tuish_food/features/shared/chat/presentation/screens/chat_screen.dart';
 import 'package:tuish_food/features/shared/notifications/presentation/screens/notifications_screen.dart';
-import 'package:tuish_food/injection_container.dart';
 import 'package:tuish_food/routing/route_names.dart';
 import 'package:tuish_food/routing/route_paths.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/add_menu_item_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/edit_menu_item_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/owner_menu_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/owner_order_detail_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/owner_orders_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/restaurant_dashboard_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/restaurant_profile_screen.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/screens/restaurant_setup_screen.dart';
 import 'package:tuish_food/routing/shell_routes/admin_shell.dart';
 import 'package:tuish_food/routing/shell_routes/customer_shell.dart';
 import 'package:tuish_food/routing/shell_routes/delivery_shell.dart';
-
-// ---------------------------------------------------------------------------
-// User role provider
-// ---------------------------------------------------------------------------
-
-/// Reads the custom claims from the current Firebase Auth user's ID token
-/// and returns the corresponding [UserRole], or null if unauthenticated /
-/// no role claim is set.
-final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return null;
-
-  final idTokenResult = await user.getIdTokenResult();
-  final roleClaim = idTokenResult.claims?['role'] as String?;
-  return UserRole.fromString(roleClaim);
-});
+import 'package:tuish_food/routing/shell_routes/restaurant_owner_shell.dart';
 
 // ---------------------------------------------------------------------------
 // Router provider
 // ---------------------------------------------------------------------------
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final authState = ref.watch(appAuthStateProvider);
   final roleAsync = ref.watch(currentUserRoleProvider);
 
   return GoRouter(
@@ -87,23 +80,31 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState.value != null;
       final currentPath = state.uri.toString();
+      final isRoleSelectionRoute = currentPath == RoutePaths.roleSelection;
       final isAuthRoute = currentPath.startsWith(RoutePaths.auth) ||
           currentPath == RoutePaths.splash;
+      final role = roleAsync.value;
+
+      if (isLoggedIn && roleAsync.isLoading) {
+        return null;
+      }
 
       // 1. Not logged in and not on an auth page -> redirect to login
       if (!isLoggedIn && !isAuthRoute) {
         return RoutePaths.login;
       }
 
-      // 2. Logged in and on an auth page -> redirect to role-appropriate home
-      if (isLoggedIn && isAuthRoute) {
-        final role = roleAsync.value;
-        return _homePathForRole(role);
+      // 2. Logged in users should still be able to access role selection.
+      //    All other auth routes redirect into the logged-in flow.
+      if (isLoggedIn && isAuthRoute && !isRoleSelectionRoute) {
+        return _landingPathForRole(role);
       }
 
       // 3. Role-based protection
       if (isLoggedIn) {
-        final role = roleAsync.value;
+        if (role == null && !isRoleSelectionRoute) {
+          return RoutePaths.roleSelection;
+        }
 
         if (currentPath.startsWith('/customer') &&
             role != UserRole.customer &&
@@ -112,6 +113,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
         if (currentPath.startsWith('/delivery') &&
             role != UserRole.deliveryPartner &&
+            role != null) {
+          return _homePathForRole(role);
+        }
+        if (currentPath.startsWith('/restaurant') &&
+            role != UserRole.restaurantOwner &&
             role != null) {
           return _homePathForRole(role);
         }
@@ -423,6 +429,95 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // ---- Restaurant setup (full screen, no shell) ----
+      GoRoute(
+        path: RoutePaths.restaurantSetup,
+        name: RouteNames.restaurantSetup,
+        builder: (context, state) => const RestaurantSetupScreen(),
+      ),
+
+      // ---- Restaurant owner shell (bottom nav) ----
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return RestaurantOwnerShell(navigationShell: navigationShell);
+        },
+        branches: [
+          // Branch 0: Dashboard
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.restaurantDashboard,
+                name: RouteNames.restaurantDashboard,
+                builder: (context, state) =>
+                    const RestaurantDashboardScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 1: Menu
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.restaurantOwnerMenu,
+                name: RouteNames.restaurantOwnerMenu,
+                builder: (context, state) =>
+                    const OwnerMenuScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'add',
+                    name: RouteNames.restaurantAddMenuItem,
+                    builder: (context, state) =>
+                        const AddMenuItemScreen(),
+                  ),
+                  GoRoute(
+                    path: ':itemId/edit',
+                    name: RouteNames.restaurantEditMenuItem,
+                    builder: (context, state) {
+                      final itemId = state.pathParameters['itemId']!;
+                      return EditMenuItemScreen(itemId: itemId);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Orders
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.restaurantOrders,
+                name: RouteNames.restaurantOrders,
+                builder: (context, state) =>
+                    const OwnerOrdersScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':orderId',
+                    name: RouteNames.restaurantOrderDetail,
+                    builder: (context, state) {
+                      final orderId = state.pathParameters['orderId']!;
+                      return OwnerOrderDetailScreen(orderId: orderId);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 3: Profile
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.restaurantProfile,
+                name: RouteNames.restaurantProfile,
+                builder: (context, state) =>
+                    const RestaurantProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
       // ---- Admin shell (drawer navigation) ----
       ShellRoute(
         builder: (context, state, child) {
@@ -543,9 +638,14 @@ String _homePathForRole(UserRole? role) {
   return switch (role) {
     UserRole.customer => RoutePaths.customerHome,
     UserRole.deliveryPartner => RoutePaths.deliveryHome,
+    UserRole.restaurantOwner => RoutePaths.restaurantDashboard,
     UserRole.admin => RoutePaths.adminDashboard,
-    null => RoutePaths.customerHome,
+    null => RoutePaths.roleSelection,
   };
+}
+
+String _landingPathForRole(UserRole? role) {
+  return role == null ? RoutePaths.roleSelection : _homePathForRole(role);
 }
 
 // ---------------------------------------------------------------------------

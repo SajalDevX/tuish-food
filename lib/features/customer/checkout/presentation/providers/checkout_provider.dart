@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuish_food/features/customer/checkout/data/datasources/payment_remote_datasource.dart';
@@ -16,6 +17,7 @@ final paymentRemoteDatasourceProvider = Provider<PaymentRemoteDatasource>((
   return PaymentRemoteDatasourceImpl(
     firestore: ref.watch(firestoreProvider),
     auth: ref.watch(firebaseAuthProvider),
+    functions: FirebaseFunctions.instance,
   );
 });
 
@@ -148,6 +150,7 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
     state = state.copyWith(couponCode: null, discount: 0);
   }
 
+  /// Places an order for COD flow (creates order + marks payment pending).
   Future<String?> placeOrder(PlaceOrderParams params) async {
     state = state.copyWith(isPlacingOrder: true, errorMessage: null);
 
@@ -162,7 +165,7 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
         return null;
       },
       (orderId) async {
-        // Process payment
+        // Process payment for COD
         final paymentResult = await _repository.processPayment(
           orderId: orderId,
           method: params.paymentMethod,
@@ -185,6 +188,68 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
             return orderId;
           },
         );
+      },
+    );
+  }
+
+  /// Creates a Razorpay order on the server and returns the razorpayOrderId.
+  /// Returns null if the call fails (error is set on state).
+  Future<String?> createRazorpayOrder({
+    required double amount,
+    required String receipt,
+  }) async {
+    state = state.copyWith(isPlacingOrder: true, errorMessage: null);
+
+    final result = await _repository.createRazorpayOrder(
+      amount: amount,
+      receipt: receipt,
+    );
+
+    return result.fold(
+      (failure) {
+        state = state.copyWith(
+          isPlacingOrder: false,
+          errorMessage: failure.message,
+        );
+        return null;
+      },
+      (data) {
+        return data['razorpayOrderId'] as String?;
+      },
+    );
+  }
+
+  /// Verifies the Razorpay payment and places the order via the Cloud Function.
+  /// Returns the created order ID on success, null on failure.
+  Future<String?> verifyAndPlaceOrder({
+    required String razorpayOrderId,
+    required String paymentId,
+    required String signature,
+    required Map<String, dynamic> orderData,
+  }) async {
+    state = state.copyWith(isPlacingOrder: true, errorMessage: null);
+
+    final result = await _repository.verifyRazorpayPayment(
+      razorpayOrderId: razorpayOrderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature: signature,
+      orderData: orderData,
+    );
+
+    return result.fold(
+      (failure) {
+        state = state.copyWith(
+          isPlacingOrder: false,
+          errorMessage: failure.message,
+        );
+        return null;
+      },
+      (orderId) {
+        state = state.copyWith(
+          isPlacingOrder: false,
+          placedOrderId: orderId,
+        );
+        return orderId;
       },
     );
   }

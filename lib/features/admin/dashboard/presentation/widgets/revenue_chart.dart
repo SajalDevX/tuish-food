@@ -22,7 +22,7 @@ class RevenueChart extends StatelessWidget {
         height: 250,
         padding: AppSizes.paddingAllM,
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
+          color: Theme.of(context).cardColor,
           borderRadius: AppSizes.borderRadiusM,
           boxShadow: [
             BoxShadow(
@@ -51,7 +51,7 @@ class RevenueChart extends StatelessWidget {
     return Container(
       padding: AppSizes.paddingAllM,
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: AppSizes.borderRadiusM,
         boxShadow: [
           BoxShadow(

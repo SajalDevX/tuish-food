@@ -25,7 +25,6 @@ class RestaurantsListScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       appBar: TuishAppBar(
         title: 'Restaurants',
         actions: [

@@ -29,7 +29,7 @@ class RestaurantTableRow extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.s8),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: AppSizes.borderRadiusM,
         boxShadow: [
           BoxShadow(

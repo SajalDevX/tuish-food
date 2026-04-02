@@ -264,7 +264,7 @@ A dynamic form builder for customization groups:
 - **Activity summary**:
   - For customers: Total orders, total spent, last order date
   - For delivery partners: Total deliveries, rating, earnings, verification status
-  - For admins: Role level, permissions
+  - For admins: Current role and account status
 - **Order history**: Recent orders associated with this user
 - **Reviews**: Reviews written by (customer) or received by (partner)
 - **Action buttons**:
@@ -319,22 +319,16 @@ Tapping "View Documents" opens a document viewer:
 
 1. Admin taps "Approve"
 2. Confirmation dialog appears
-3. Cloud Function `setUserRole` is called:
-   - Sets custom claim `role: 'deliveryPartner'`
-   - Updates `verificationStatus: 'approved'`
-   - Updates `role: 'deliveryPartner'`
-4. Push notification sent to partner: "Your application has been approved!"
-5. Partner removed from verification queue
+3. Current admin tooling verifies the partner and keeps them in the delivery-partner role
+4. Admin UI treats verified partners as active/non-banned users
+5. Any future verification-status workflow should be documented separately once fully implemented
 
 ### Reject Flow
 
 1. Admin taps "Reject"
-2. Reason input dialog appears (required):
-   - Predefined reasons: "Blurry document", "Expired license", "Invalid ID", "Other"
-   - Custom text field for additional details
-3. Updates `verificationStatus: 'rejected'` and `verificationNote`
-4. Push notification sent to partner: "Your application needs attention. Please check the app."
-5. Partner can resubmit documents
+2. Current admin tooling rejects by banning the partner user record
+3. UI treats rejected partners as banned users
+4. Document-review reasons and resubmission flow are not fully implemented in the current app
 
 ### Partner List
 

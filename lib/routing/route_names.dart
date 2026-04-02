@@ -39,6 +39,16 @@ abstract final class RouteNames {
   static const String deliveryEarnings = 'delivery-earnings';
   static const String deliveryProfile = 'delivery-profile';
 
+  // Restaurant Owner
+  static const String restaurantDashboard = 'restaurant-dashboard';
+  static const String restaurantSetup = 'restaurant-setup';
+  static const String restaurantOwnerMenu = 'restaurant-owner-menu';
+  static const String restaurantAddMenuItem = 'restaurant-add-menu-item';
+  static const String restaurantEditMenuItem = 'restaurant-edit-menu-item';
+  static const String restaurantOrders = 'restaurant-orders';
+  static const String restaurantOrderDetail = 'restaurant-order-detail';
+  static const String restaurantProfile = 'restaurant-profile';
+
   // Admin
   static const String adminDashboard = 'admin-dashboard';
   static const String adminRestaurants = 'admin-restaurants';

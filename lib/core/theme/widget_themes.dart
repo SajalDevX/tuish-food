@@ -63,7 +63,7 @@ abstract final class WidgetThemes {
   }
 
   static final cardTheme = CardTheme(
-    color: AppColors.cardBackground,
+    color: AppColors.lightGlassFill,
     elevation: AppSizes.elevationCard,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppSizes.radiusS),

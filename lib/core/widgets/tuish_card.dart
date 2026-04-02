@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
@@ -8,7 +9,7 @@ class TuishCard extends StatelessWidget {
     required this.child,
     this.onTap,
     this.padding,
-    this.elevation,
+    this.elevation, // kept for API compat but ignored for glass
     this.borderRadius,
     this.color,
     this.margin,
@@ -24,22 +25,35 @@ class TuishCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorderRadius = borderRadius ?? AppSizes.borderRadiusM;
-    final effectiveElevation = elevation ?? AppSizes.elevationCard;
-    final effectiveColor = color ?? AppColors.cardBackground;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveRadius = borderRadius ?? AppSizes.borderRadiusL;
+    final effectiveFill = color ??
+        (isDark ? AppColors.darkGlassFill : AppColors.lightGlassFill);
+    final effectiveBorder =
+        isDark ? AppColors.darkGlassBorder : AppColors.lightGlassBorder;
 
-    return Card(
-      elevation: effectiveElevation,
-      shape: RoundedRectangleBorder(borderRadius: effectiveBorderRadius),
-      color: effectiveColor,
-      margin: margin ?? EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: effectiveBorderRadius,
-        child: Padding(
-          padding: padding ?? AppSizes.paddingAllM,
-          child: child,
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: effectiveRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Material(
+            color: effectiveFill,
+            borderRadius: effectiveRadius,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: effectiveRadius,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: effectiveRadius,
+                  border: Border.all(color: effectiveBorder, width: 1),
+                ),
+                padding: padding ?? AppSizes.paddingAllM,
+                child: child,
+              ),
+            ),
+          ),
         ),
       ),
     );

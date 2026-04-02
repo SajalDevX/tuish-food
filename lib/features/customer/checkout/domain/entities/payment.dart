@@ -2,12 +2,12 @@ import 'package:equatable/equatable.dart';
 import 'package:tuish_food/core/enums/payment_status.dart';
 
 enum PaymentMethod {
-  card,
+  razorpay,
   cashOnDelivery;
 
   String get displayName {
     return switch (this) {
-      PaymentMethod.card => 'Card Payment',
+      PaymentMethod.razorpay => 'Pay Online',
       PaymentMethod.cashOnDelivery => 'Cash on Delivery',
     };
   }
@@ -28,6 +28,9 @@ class Payment extends Equatable {
   final PaymentStatus status;
   final double amount;
   final String? transactionId;
+  final String? razorpayOrderId;
+  final String? razorpayPaymentId;
+  final String? razorpaySignature;
 
   const Payment({
     required this.id,
@@ -35,8 +38,20 @@ class Payment extends Equatable {
     required this.status,
     required this.amount,
     this.transactionId,
+    this.razorpayOrderId,
+    this.razorpayPaymentId,
+    this.razorpaySignature,
   });
 
   @override
-  List<Object?> get props => [id, method, status, amount, transactionId];
+  List<Object?> get props => [
+        id,
+        method,
+        status,
+        amount,
+        transactionId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature,
+      ];
 }

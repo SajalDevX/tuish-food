@@ -43,6 +43,16 @@ abstract final class RoutePaths {
   static const String deliveryEarnings = '/delivery/earnings';
   static const String deliveryProfile = '/delivery/profile';
 
+  // Restaurant Owner
+  static const String restaurantDashboard = '/restaurant/dashboard';
+  static const String restaurantSetup = '/restaurant/setup';
+  static const String restaurantOwnerMenu = '/restaurant/menu';
+  static const String restaurantAddMenuItem = '/restaurant/menu/add';
+  static const String restaurantEditMenuItem = '/restaurant/menu/:itemId/edit';
+  static const String restaurantOrders = '/restaurant/orders';
+  static const String restaurantOrderDetail = '/restaurant/orders/:orderId';
+  static const String restaurantProfile = '/restaurant/profile';
+
   // Admin
   static const String adminDashboard = '/admin/dashboard';
   static const String adminRestaurants = '/admin/restaurants';

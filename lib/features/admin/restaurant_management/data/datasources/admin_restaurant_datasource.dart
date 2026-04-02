@@ -41,6 +41,7 @@ class AdminRestaurantDatasourceImpl implements AdminRestaurantDatasource {
       priceLevel: (data['priceLevel'] as num?)?.toInt() ?? 1,
       isActive: data['isActive'] as bool? ?? true,
       isOpen: data['isOpen'] as bool? ?? false,
+      ownerUid: data['ownerUid'] as String?,
       preparationTimeMinutes:
           (data['preparationTimeMinutes'] as num?)?.toInt() ?? 30,
       minimumOrderAmount:

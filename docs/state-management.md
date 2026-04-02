@@ -101,7 +101,7 @@ dart run build_runner watch --delete-conflicting-outputs
     +------------+  +------------+  +------------+
     | userProfile |  | nearbyRest.|  | activeOrder|
     | userAddrs   |  | restaurant |  | orderHist. |
-    | favorites   |  | Detail     |  | orderTrack.|
+    | roleState   |  | Detail     |  | orderTrack.|
     |             |  | menuItems  |  | chatMsgs   |
     +------------+  +------------+  +------------+
 ```
@@ -440,12 +440,12 @@ Future<DashboardStats> dashboardStats(
   return DashboardStats.fromJson(result.data);
 }
 
-// Pending verifications count (real-time)
+// Delivery partner count (real-time)
 @riverpod
-Stream<int> pendingVerificationsCount(PendingVerificationsCountRef ref) {
+Stream<int> deliveryPartnerCount(DeliveryPartnerCountRef ref) {
   return FirebaseFirestore.instance
       .collection('users')
-      .where('verificationStatus', isEqualTo: 'pending')
+      .where('role', isEqualTo: 'deliveryPartner')
       .snapshots()
       .map((snapshot) => snapshot.size);
 }

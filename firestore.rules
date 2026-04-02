@@ -31,6 +31,10 @@ service cloud.firestore {
       return hasRole('customer');
     }
 
+    function isRestaurantOwner() {
+      return hasRole('restaurantOwner');
+    }
+
     // ============================================================
     // Users Collection
     // ============================================================
@@ -39,9 +43,17 @@ service cloud.firestore {
       // Users can read their own profile; admins can read any
       allow read: if isOwner(userId) || isAdmin();
 
-      // Users can update their own profile (excluding role, isBanned)
+      // Users can update their own profile. Role changes are only allowed
+      // for self-service onboarding into non-admin roles.
       allow update: if isOwner(userId)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isBanned', 'isVerified']);
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isBanned', 'isVerified'])
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt'])
+            && request.resource.data.role in ['customer', 'deliveryPartner', 'restaurantOwner']
+            && resource.data.role != 'admin'
+          )
+        );
 
       // Only Cloud Functions create user documents (via auth trigger)
       allow create: if false;
@@ -61,19 +73,31 @@ service cloud.firestore {
       // Anyone authenticated can read active restaurants
       allow read: if isAuthenticated();
 
-      // Only admins can create, update, delete
-      allow create, update, delete: if isAdmin();
+      // Admins can do anything; restaurant owners can create their own
+      allow create: if isAdmin()
+        || (isRestaurantOwner() && request.resource.data.ownerUid == request.auth.uid);
+
+      // Admins or the restaurant owner can update
+      allow update: if isAdmin()
+        || (isRestaurantOwner() && resource.data.ownerUid == request.auth.uid);
+
+      // Only admins can delete
+      allow delete: if isAdmin();
 
       // Menu Categories subcollection
       match /menuCategories/{categoryId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
+        allow create, update, delete: if isAdmin()
+          || (isRestaurantOwner()
+              && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerUid == request.auth.uid);
       }
 
       // Menu Items subcollection
       match /menuItems/{itemId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
+        allow create, update, delete: if isAdmin()
+          || (isRestaurantOwner()
+              && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerUid == request.auth.uid);
       }
     }
 
@@ -84,10 +108,13 @@ service cloud.firestore {
     match /orders/{orderId} {
       // Customers can read their own orders
       // Delivery partners can read orders assigned to them
+      // Restaurant owners can read orders for their restaurant
       // Admins can read all orders
       allow read: if isAdmin()
         || (isAuthenticated() && resource.data.customerId == request.auth.uid)
-        || (isAuthenticated() && resource.data.deliveryPartnerId == request.auth.uid);
+        || (isAuthenticated() && resource.data.deliveryPartnerId == request.auth.uid)
+        || (isRestaurantOwner()
+            && get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerUid == request.auth.uid);
 
       // Customers can create orders
       allow create: if isCustomer()
@@ -102,7 +129,11 @@ service cloud.firestore {
                .hasOnly(['status', 'statusHistory', 'cancellationReason', 'cancelledBy', 'updatedAt']))
         || (isDeliveryPartner() && resource.data.deliveryPartnerId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status', 'statusHistory', 'actualDeliveryTime', 'updatedAt']));
+               .hasOnly(['status', 'statusHistory', 'actualDeliveryTime', 'updatedAt']))
+        || (isRestaurantOwner()
+            && get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'statusHistory', 'updatedAt']));
 
       allow delete: if false;
     }

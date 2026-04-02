@@ -101,20 +101,18 @@ flutter run --dart-define=ENVIRONMENT=prod
 
 ```
 lib/
-  core/               # Shared utilities, theme, constants, error handling
+  core/               # Shared utilities, constants, services, error handling
   features/           # Feature modules (features-first architecture)
     auth/             # Authentication & onboarding
     customer/         # Customer-facing screens & logic
     delivery/         # Delivery partner screens & logic
+    restaurant_owner/ # Restaurant owner screens & flows
     admin/            # Admin panel screens & logic
-    orders/           # Shared order logic
-    chat/             # In-app messaging
-    notifications/    # Push & local notifications
-    tracking/         # Real-time delivery tracking
-    payments/         # Stripe integration
-  shared/             # Shared widgets, models, providers
+    shared/           # Shared feature areas like chat and notifications
   app.dart            # MaterialApp.router configuration
+  injection_container.dart
   main.dart           # Entry point
+  routing/            # GoRouter configuration, shells, route constants
 functions/            # Firebase Cloud Functions (TypeScript)
 docs/                 # Project documentation
 ```

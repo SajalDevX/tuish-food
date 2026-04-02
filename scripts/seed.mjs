@@ -37,6 +37,12 @@ const TEST_USERS = [
     displayName: "Test Driver",
     role: "deliveryPartner",
   },
+  {
+    email: "owner@tuishfood.com",
+    password: "Owner@123",
+    displayName: "Test Restaurant Owner",
+    role: "restaurantOwner",
+  },
 ];
 
 // ─── Sample Restaurants ──────────────────────────────────────────────────────
@@ -524,12 +530,23 @@ async function main() {
   console.log("\n🍽️  Tuish Food - Seeding Firebase\n");
 
   console.log("1. Creating users...");
+  const createdUsers = {};
   for (const userData of TEST_USERS) {
-    await createOrGetUser(userData);
+    const user = await createOrGetUser(userData);
+    createdUsers[userData.role] = user.uid;
   }
 
   console.log("\n2. Seeding restaurants...");
   await seedRestaurants();
+
+  // Assign the first restaurant to the restaurant owner
+  if (createdUsers["restaurantOwner"]) {
+    const ownerUid = createdUsers["restaurantOwner"];
+    await db.collection("restaurants").doc("rest_biryani_house").update({
+      ownerUid,
+    });
+    console.log(`  ✓ Assigned rest_biryani_house to owner ${ownerUid}`);
+  }
 
   console.log("\n3. Seeding app config...");
   await seedAppConfig();
@@ -538,7 +555,8 @@ async function main() {
   console.log("Test accounts:");
   console.log("  Admin:    admin@tuishfood.com    / Admin@123");
   console.log("  Customer: customer@tuishfood.com / Customer@123");
-  console.log("  Driver:   driver@tuishfood.com   / Driver@123\n");
+  console.log("  Driver:   driver@tuishfood.com   / Driver@123");
+  console.log("  Owner:    owner@tuishfood.com    / Owner@123\n");
 }
 
 main().catch((err) => {

@@ -1,444 +1,185 @@
 # Authentication
 
-This document covers authentication methods, user role management, custom claims, security rules, and the complete auth flow for Tuish Food.
-
----
-
-## Supported Authentication Methods
-
-| Method | Package | Use Case |
-| ------ | ------- | -------- |
-| **Email / Password** | `firebase_auth` | Primary sign-up and sign-in method |
-| **Phone OTP** | `firebase_auth` | Phone number verification, can be linked to existing account |
-| **Google Sign-In** | `google_sign_in` + `firebase_auth` | Social login for faster onboarding |
-
-All methods result in a Firebase Auth user. After authentication, a Firestore `users/{uid}` document is created (if new) and a custom claim for `role` is assigned.
-
----
-
-## Custom Claims Strategy
-
-Firebase Custom Claims are used for role-based access control. They are set via Cloud Functions and embedded in the Firebase Auth token.
-
-```typescript
-// Custom claims structure
-interface TuishCustomClaims {
-  role: 'customer' | 'deliveryPartner' | 'admin';
-}
-```
-
-### Why Custom Claims?
-
-- **Security rules**: Firestore and Storage rules can check `request.auth.token.role` without reading the user document.
-- **Client-side**: The Flutter app reads claims from the ID token to determine which shell/navigation to show.
-- **Performance**: No extra Firestore read needed to determine user role on every authenticated request.
-
-### Claim Limits
-
-Firebase custom claims have a **1000 byte limit** per user. The `role` field is well within this limit.
-
----
-
-## Registration Flows
-
-### Customer Registration
-
-```
-+-------------------+     +-------------------+     +-------------------+
-|   Sign Up Screen  | --> | Firebase Auth      | --> | Cloud Function:   |
-|   (email/Google)  |     | createUser         |     | onUserCreated     |
-+-------------------+     +-------------------+     +-------------------+
-                                                            |
-                                                            v
-                                                    +-------------------+
-                                                    | Set custom claim  |
-                                                    | role: 'customer'  |
-                                                    +-------------------+
-                                                            |
-                                                            v
-                                                    +-------------------+
-                                                    | Create Firestore  |
-                                                    | users/{uid} doc   |
-                                                    +-------------------+
-                                                            |
-                                                            v
-                                                    +-------------------+
-                                                    | Client: force     |
-                                                    | token refresh     |
-                                                    +-------------------+
-                                                            |
-                                                            v
-                                                    +-------------------+
-                                                    | Navigate to       |
-                                                    | Customer Shell    |
-                                                    +-------------------+
-```
-
-Customer registration is automatic. As soon as a user signs up, they are assigned the `customer` role.
-
-### Delivery Partner Registration
-
-```
-+-------------------+     +-------------------+     +-------------------+
-|  Sign Up Screen   | --> | Firebase Auth      | --> | Cloud Function:   |
-|  (as customer     |     | createUser         |     | onUserCreated     |
-|  initially)       |     |                    |     | role: 'customer'  |
-+-------------------+     +-------------------+     +-------------------+
-        |
-        v
-+-------------------+
-| Partner Signup    |
-| Screen            |
-| - Upload license  |
-| - Upload ID       |
-| - Vehicle info    |
-+-------------------+
-        |
-        v
-+-------------------+     +-------------------+
-| Firestore update  | --> | verificationStatus |
-| Add partner fields|     | = 'pending'        |
-+-------------------+     +-------------------+
-        |
-        v
-+-------------------+
-| Waiting Screen    |  <-- "Your application is under review"
-+-------------------+
-        |
-        v (Admin approves)
-+-------------------+     +-------------------+
-| Cloud Function:   | --> | Set custom claim   |
-| setUserRole       |     | role:              |
-| (admin callable)  |     | 'deliveryPartner'  |
-+-------------------+     +-------------------+
-        |
-        v
-+-------------------+
-| Notification sent |
-| to partner        |
-+-------------------+
-        |
-        v
-+-------------------+
-| Partner reopens   |
-| app, token        |
-| refreshed         |
-+-------------------+
-        |
-        v
-+-------------------+
-| Navigate to       |
-| Delivery Shell    |
-+-------------------+
-```
-
-### Admin Account Creation
-
-Admin accounts are **never** created through the public registration flow. They are created through one of two methods:
-
-1. **Bootstrap (first admin)**: A dedicated Cloud Function or Firebase Admin SDK script sets the first admin.
-2. **Existing admin creates new admin**: An existing admin calls the `setUserRole` Cloud Function.
-
----
-
-## Role Assignment Flow
-
-```dart
-// Cloud Function: setUserRole (callable, admin-only)
-exports.setUserRole = functions.https.onCall(async (data, context) => {
-  // Verify caller is admin
-  if (!context.auth?.token?.role || context.auth.token.role !== 'admin') {
-    throw new functions.https.HttpsError(
-      'permission-denied',
-      'Only admins can set user roles.'
-    );
-  }
-
-  const { userId, role } = data;
-
-  // Validate role
-  if (!['customer', 'deliveryPartner', 'admin'].includes(role)) {
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'Invalid role.'
-    );
-  }
-
-  // Additional check for delivery partner
-  if (role === 'deliveryPartner') {
-    const userDoc = await admin.firestore().doc(`users/${userId}`).get();
-    if (userDoc.data()?.verificationStatus !== 'pending') {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Partner must have pending verification status.'
-      );
-    }
-
-    // Update verification status
-    await admin.firestore().doc(`users/${userId}`).update({
-      verificationStatus: 'approved',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  }
-
-  // Set custom claim
-  await admin.auth().setCustomUserClaims(userId, { role });
-
-  // Update Firestore user doc
-  await admin.firestore().doc(`users/${userId}`).update({
-    role: role,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  return { success: true };
-});
-```
-
----
-
-## Token Refresh Strategy
-
-After a role change, the client must refresh its ID token to get the new custom claims.
-
-```dart
-// Force token refresh after role change
-Future<void> refreshTokenAndCheckRole() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  // Force refresh to get new custom claims
-  final idTokenResult = await user.getIdTokenResult(true);
-
-  final role = idTokenResult.claims?['role'] as String?;
-
-  // Navigate based on new role
-  if (role != null) {
-    ref.read(userRoleProvider.notifier).state = UserRole.fromString(role);
-  }
-}
-```
-
-### When to Refresh
-
-| Event | Action |
-| ----- | ------ |
-| App launch | `getIdTokenResult(true)` to ensure fresh claims |
-| After sign-in | Claims already fresh |
-| After admin changes a user's role | The affected user must be notified to relaunch or force-refresh |
-| Periodic (optional) | Token auto-refreshes every ~1 hour by Firebase SDK |
-
----
-
-## Auth Flow Diagram (App Launch)
-
-```
-App Launch
-    |
-    v
-Check FirebaseAuth.currentUser
-    |
-    +-- null --> Show Login Screen
-    |
-    +-- exists
-         |
-         v
-    getIdTokenResult(true)
-         |
-         v
-    Read custom claims
-         |
-         +-- role == null --> Show Role Selection / Error
-         |
-         +-- role == 'customer'
-         |       |
-         |       v
-         |   Check if onboarding complete
-         |       |
-         |       +-- no  --> Onboarding Screen
-         |       +-- yes --> Customer Shell
-         |
-         +-- role == 'deliveryPartner'
-         |       |
-         |       v
-         |   Check verificationStatus
-         |       |
-         |       +-- 'pending'  --> Verification Pending Screen
-         |       +-- 'rejected' --> Resubmit Documents Screen
-         |       +-- 'approved' --> Delivery Shell
-         |
-         +-- role == 'admin'
-                 |
-                 v
-             Admin Shell
-```
-
----
-
-## Firestore Security Rules for Roles
-
-The custom claims are available in Firestore security rules via `request.auth.token`:
-
-```javascript
-// Check if user is authenticated
-function isAuthenticated() {
-  return request.auth != null;
-}
-
-// Check specific role
-function hasRole(role) {
-  return isAuthenticated() && request.auth.token.role == role;
-}
-
-// Check if user is admin
-function isAdmin() {
-  return hasRole('admin');
-}
-
-// Example: Only admins can create restaurants
-match /restaurants/{restaurantId} {
-  allow read: if isAuthenticated();
-  allow create, update, delete: if isAdmin();
-}
-
-// Example: Customers can only read/write their own orders
-match /orders/{orderId} {
-  allow create: if hasRole('customer');
-  allow read: if resource.data.customerId == request.auth.uid
-    || resource.data.deliveryPartnerId == request.auth.uid
-    || isAdmin();
-  allow update: if resource.data.customerId == request.auth.uid
-    || resource.data.deliveryPartnerId == request.auth.uid
-    || isAdmin();
-}
-```
-
----
-
-## Logout Flow
-
-```dart
-Future<void> signOut() async {
-  // 1. Remove FCM token from user document
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token != null) {
-      await FirebaseFirestore.instance.doc('users/${user.uid}').update({
-        'fcmTokens': FieldValue.arrayRemove([token]),
-      });
-    }
-  }
-
-  // 2. Clear local state
-  await Hive.box('cart').clear();
-  ref.invalidate(userProfileProvider);
-  ref.invalidate(cartProvider);
-
-  // 3. Sign out from Firebase Auth
-  await GoogleSignIn().signOut(); // If Google sign-in was used
-  await FirebaseAuth.instance.signOut();
-
-  // 4. GoRouter redirect will handle navigation to login
-}
-```
-
----
-
-## Account Deletion
-
-To comply with app store requirements, users can delete their accounts:
-
-```dart
-Future<void> deleteAccount() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  // 1. Call Cloud Function to clean up server-side data
-  final callable = FirebaseFunctions.instance.httpsCallable('deleteUserData');
-  await callable.call({'userId': user.uid});
-
-  // 2. Delete Firebase Auth account
-  await user.delete();
-
-  // 3. Clear local storage
-  await Hive.deleteFromDisk();
-
-  // 4. Navigate to login
-}
-```
-
-The `deleteUserData` Cloud Function handles:
-- Deleting the user's Firestore document and subcollections
-- Deleting uploaded files from Firebase Storage
-- Cancelling any pending orders
-- Removing the user from chat participants
-- Deleting the Stripe customer (if applicable)
-
----
-
-## First Admin Bootstrap
-
-When deploying the app for the first time, there is no admin to create other admins. Use the Firebase Admin SDK to bootstrap the first admin:
-
-```typescript
-// scripts/bootstrap-admin.ts
-// Run with: npx ts-node scripts/bootstrap-admin.ts
-
-import * as admin from 'firebase-admin';
-
-admin.initializeApp();
-
-async function bootstrapAdmin(email: string) {
-  // Find or create the user
-  let user;
-  try {
-    user = await admin.auth().getUserByEmail(email);
-  } catch {
-    user = await admin.auth().createUser({
-      email,
-      password: 'ChangeThisPassword123!',
-    });
-  }
-
-  // Set admin custom claim
-  await admin.auth().setCustomUserClaims(user.uid, { role: 'admin' });
-
-  // Create/update Firestore document
-  await admin.firestore().doc(`users/${user.uid}`).set({
-    uid: user.uid,
-    email: email,
-    displayName: 'Super Admin',
-    role: 'admin',
-    adminLevel: 'superAdmin',
-    permissions: ['all'],
-    isActive: true,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, { merge: true });
-
-  console.log(`Admin bootstrapped: ${user.uid} (${email})`);
-}
-
-bootstrapAdmin('admin@tuishfood.com');
-```
-
-Run once during initial deployment:
-
-```bash
-cd functions
-npx ts-node ../scripts/bootstrap-admin.ts
-```
-
----
-
-## Security Considerations
-
-| Concern | Mitigation |
-| ------- | ---------- |
-| Role escalation | Custom claims can only be set by Cloud Functions with admin verification |
-| Token theft | Firebase tokens expire every 1 hour; refresh tokens are bound to device |
-| Brute force | Firebase Auth has built-in rate limiting for failed sign-in attempts |
-| Stale claims | Force token refresh on app launch and after known role changes |
-| Account enumeration | Firebase Auth's email enumeration protection is enabled |
-| Phone abuse | Enable App Check to prevent abuse of phone auth SMS |
-| Unverified email | Require email verification before allowing order placement |
+This document describes the authentication and role flow implemented in the app today.
+
+## Source Of Truth
+
+- Auth data source: `lib/features/auth/data/datasources/auth_remote_datasource.dart`
+- Auth repository: `lib/features/auth/data/repositories/auth_repository_impl.dart`
+- Auth model: `lib/features/auth/data/models/user_model.dart`
+- Auth entity: `lib/features/auth/domain/entities/app_user.dart`
+- Auth state/provider: `lib/features/auth/presentation/providers/auth_provider.dart`
+- Auth screens:
+  - `lib/features/auth/presentation/screens/login_screen.dart`
+  - `lib/features/auth/presentation/screens/register_screen.dart`
+  - `lib/features/auth/presentation/screens/phone_verification_screen.dart`
+  - `lib/features/auth/presentation/screens/forgot_password_screen.dart`
+  - `lib/features/auth/presentation/screens/role_selection_screen.dart`
+  - `lib/features/auth/presentation/screens/splash_screen.dart`
+- Router integration: `lib/routing/app_router.dart`
+- Callable wrapper: `lib/core/network/firebase_callable.dart`
+- Role constants: `lib/core/enums/user_role.dart`
+- Firestore rules: `firestore.rules`
+- Cloud Function for admin role updates: `functions/src/auth/set_user_role.ts`
+
+## Supported Sign-In Methods
+
+| Method | Status | Notes |
+| ------ | ------ | ----- |
+| Email / Password | Implemented | Main sign-in and sign-up flow |
+| Phone OTP | Implemented | Uses `FirebaseAuth.verifyPhoneNumber` |
+| Google Sign-In | Not currently wired in these screens | Do not treat as current app flow |
+
+## User Record Model
+
+The app stores user profile data in `users/{uid}` and uses the `role` field from:
+
+1. Firebase custom claims when available
+2. Firestore `users/{uid}.role` as fallback
+
+The current supported roles are:
+
+- `customer`
+- `deliveryPartner`
+- `restaurantOwner`
+- `admin`
+
+These values are defined in `lib/core/enums/user_role.dart`.
+
+## Current Sign-Up Flow
+
+### Email Sign-Up
+
+Implemented in:
+
+- `lib/features/auth/presentation/screens/register_screen.dart`
+- `lib/features/auth/presentation/providers/auth_provider.dart`
+- `lib/features/auth/data/datasources/auth_remote_datasource.dart`
+
+Current behavior:
+
+1. User registers with email and password.
+2. Firebase Auth user is created.
+3. `saveUserToFirestore()` creates or merges the user document.
+4. New users start with `role: customer`.
+5. UI navigates to `/auth/role-selection`.
+
+### Phone Sign-In
+
+Implemented in:
+
+- `lib/features/auth/presentation/screens/phone_verification_screen.dart`
+- `lib/features/auth/presentation/providers/auth_provider.dart`
+- `lib/features/auth/data/datasources/auth_remote_datasource.dart`
+
+Current behavior:
+
+1. User requests OTP.
+2. Firebase sends code.
+3. User submits OTP.
+4. Existing Firestore user is loaded when present.
+5. Otherwise a new Firestore user document is created.
+6. UI navigates to `/auth/role-selection`.
+
+## Current Role Selection Flow
+
+Implemented in:
+
+- `lib/features/auth/presentation/screens/role_selection_screen.dart`
+- `lib/features/auth/presentation/providers/auth_provider.dart`
+- `lib/features/auth/data/datasources/auth_remote_datasource.dart`
+
+Current behavior:
+
+1. Auth screens navigate to `/auth/role-selection`.
+2. User chooses one of:
+   - customer
+   - restaurant owner
+   - delivery partner
+3. `AuthNotifier.updateUserRole()` updates `users/{uid}.role`.
+4. The notifier reloads the current user and emits `Authenticated(user.copyWith(role: role))`.
+5. `RoleSelectionScreen` routes by selected role:
+   - customer -> `/customer/home`
+   - delivery partner -> `/delivery/home`
+   - restaurant owner -> `/restaurant/setup`
+   - admin -> `/admin/dashboard`
+
+## Current Restaurant Owner Flow
+
+Relevant files:
+
+- `lib/features/auth/presentation/screens/role_selection_screen.dart`
+- `lib/features/restaurant_owner/presentation/screens/restaurant_setup_screen.dart`
+- `lib/features/restaurant_owner/presentation/screens/restaurant_dashboard_screen.dart`
+- `lib/routing/shell_routes/restaurant_owner_shell.dart`
+
+Current app behavior:
+
+1. User signs in.
+2. User goes to `/auth/role-selection`.
+3. User picks `I Own a Restaurant`.
+4. User role is updated to `restaurantOwner`.
+5. User is sent to `/restaurant/setup`.
+6. Owner shell routes live under `/restaurant/*`.
+
+Current limitation:
+
+- Restaurant setup submission is still placeholder UI and is not yet fully connected to restaurant creation/persistence.
+
+## Current Router Role Resolution
+
+The router does not rely only on token claims anymore.
+
+`currentUserRoleProvider` in `lib/features/auth/presentation/providers/auth_provider.dart` resolves role through the auth repository, which ultimately checks:
+
+1. Firebase custom claims
+2. Firestore `users/{uid}.role`
+
+This is important because self-service role selection currently updates Firestore directly.
+
+## Admin Role Changes
+
+Admin-driven role changes are handled by Cloud Functions in:
+
+- `functions/src/auth/set_user_role.ts`
+
+Current behavior:
+
+- Callable name: `setUserRole`
+- Caller must already be `admin`
+- Function updates both:
+  - Firebase custom claims
+  - Firestore `users/{uid}.role`
+
+This path should still be used for privileged role changes, especially admin assignment.
+
+## Firestore Rules And Current Role Policy
+
+Current rules live in `firestore.rules`.
+
+Important behavior:
+
+- Users cannot promote themselves to `admin`.
+- Users can currently self-select `customer`, `deliveryPartner`, or `restaurantOwner` during onboarding by updating only:
+  - `role`
+  - `updatedAt`
+
+This matches the current app flow in `RoleSelectionScreen`.
+
+## App Launch Flow
+
+Current runtime behavior:
+
+1. App starts.
+2. Router checks auth state.
+3. If signed out, protected routes redirect to `/auth/login`.
+4. If signed in, router resolves role from `currentUserRoleProvider`.
+5. If role is missing, router redirects to `/auth/role-selection`.
+6. If role exists, router enforces the correct route prefix.
+
+## Current Gaps
+
+- There is no fully implemented onboarding-completion guard yet.
+- Owner setup completion is not yet enforced by router state.
+- Delivery verification is not currently modeled in the same detailed way older docs described.
+- Any older docs that mention `/login`, `/signup`, `/otp-verification`, or customer-only custom claim flow should be considered outdated in favor of the files listed above.

@@ -56,25 +56,22 @@ The most important rule: **source code dependencies only point inward**.
 
 Instead of grouping by layer (all models in one folder, all screens in another), Tuish Food groups by **feature**. Each feature is a self-contained module with its own layers.
 
+This tree has been updated to reflect the current app status more closely.
+
 ```
 lib/
   core/
     constants/
-      app_constants.dart
       api_constants.dart
+      app_colors.dart
+      app_sizes.dart
+      app_strings.dart
+      app_typography.dart
     errors/
       failures.dart
       exceptions.dart
     network/
-      network_info.dart
-    theme/
-      app_theme.dart
-      app_colors.dart
-      app_typography.dart
-    utils/
-      validators.dart
-      formatters.dart
-      extensions.dart
+      firebase_callable.dart
 
   features/
     auth/
@@ -87,105 +84,68 @@ lib/
           auth_repository_impl.dart
       domain/
         entities/
-          user_entity.dart
+          app_user.dart
         repositories/
-          auth_repository.dart          # Abstract
-        usecases/
-          sign_in_with_email.dart
-          sign_in_with_google.dart
-          sign_up.dart
-          sign_out.dart
-          get_current_user.dart
+          auth_repository.dart
       presentation/
         providers/
           auth_provider.dart
+          auth_state.dart
         screens/
           login_screen.dart
-          signup_screen.dart
-          otp_verification_screen.dart
-        widgets/
-          auth_form.dart
-          social_login_buttons.dart
+          register_screen.dart
+          phone_verification_screen.dart
+          role_selection_screen.dart
+          splash_screen.dart
 
     customer/
-      home/
-        data/ ...
-        domain/ ...
-        presentation/ ...
-      restaurant_detail/
-        data/ ...
-        domain/ ...
-        presentation/ ...
       cart/
-        data/ ...
-        domain/ ...
-        presentation/ ...
       checkout/
-        ...
-      order_tracking/
-        ...
+      home/
+      orders/
+      profile/
+      reviews/
+      tracking/
 
     delivery/
       dashboard/
-        ...
-      active_delivery/
-        ...
       earnings/
-        ...
+      navigation/
+      profile/
+
+    restaurant_owner/
+      presentation/
+        screens/
+          restaurant_setup_screen.dart
+          restaurant_dashboard_screen.dart
+          owner_menu_screen.dart
+          add_menu_item_screen.dart
+          edit_menu_item_screen.dart
+          owner_orders_screen.dart
+          owner_order_detail_screen.dart
+          restaurant_profile_screen.dart
 
     admin/
       dashboard/
-        ...
-      restaurant_management/
-        ...
-      user_management/
-        ...
       order_management/
-        ...
+      restaurant_management/
+      promotions/
+      user_management/
+      settings/
 
-    orders/           # Shared order domain (used by customer, delivery, admin)
-      data/ ...
-      domain/ ...
-      presentation/ ...
-
-    chat/
-      data/ ...
-      domain/ ...
-      presentation/ ...
-
-    tracking/
-      data/ ...
-      domain/ ...
-      presentation/ ...
-
-    payments/
-      data/ ...
-      domain/ ...
-      presentation/ ...
-
-    notifications/
-      data/ ...
-      domain/ ...
-      presentation/ ...
-
-  shared/
-    widgets/
-      tuish_button.dart
-      tuish_text_field.dart
-      tuish_card.dart
-      loading_skeleton.dart
-      status_badge.dart
-      rating_bar.dart
-      price_tag.dart
-      error_widget.dart
-      empty_state_widget.dart
-    providers/
-      shared_providers.dart
-    models/
-      geolocation.dart
+    shared/
+      chat/
+      notifications/
 
   app.dart
+  injection_container.dart
   main.dart
+  routing/
+    app_router.dart
+    route_names.dart
+    route_paths.dart
+    guards/
+    shell_routes/
 ```
 
 ---

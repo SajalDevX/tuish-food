@@ -49,3 +49,9 @@ export {expirePromotions} from "./promotions/expire_promotions";
 // ── Maintenance ─────────────────────────────────────────────────────────────
 export {cleanupOldLocations} from "./maintenance/cleanup_old_locations";
 export {cleanupOrphanData} from "./maintenance/cleanup_orphan_data";
+
+// ── Payments (Razorpay) ────────────────────────────────────────────────────
+export {createRazorpayOrder} from "./payments/create_razorpay_order";
+export {verifyRazorpayPayment} from "./payments/verify_razorpay_payment";
+export {razorpayWebhook} from "./payments/razorpay_webhook";
+export {processRazorpayRefund} from "./payments/process_razorpay_refund";

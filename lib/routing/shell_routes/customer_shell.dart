@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,49 +21,55 @@ class CustomerShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_outlined),
-            selectedIcon: Icon(
-              Icons.restaurant,
-              color: AppColors.primary,
-            ),
-            label: AppStrings.home,
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            selectedIndex: navigationShell.currentIndex,
+            onDestinationSelected: (index) {
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
+            indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.restaurant_outlined),
+                selectedIcon: Icon(
+                  Icons.restaurant,
+                  color: AppColors.primary,
+                ),
+                label: AppStrings.home,
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(
+                  Icons.receipt_long,
+                  color: AppColors.primary,
+                ),
+                label: AppStrings.myOrders,
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(
+                  Icons.shopping_cart,
+                  color: AppColors.primary,
+                ),
+                label: AppStrings.cart,
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outlined),
+                selectedIcon: Icon(
+                  Icons.person,
+                  color: AppColors.primary,
+                ),
+                label: AppStrings.profile,
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(
-              Icons.receipt_long,
-              color: AppColors.primary,
-            ),
-            label: AppStrings.myOrders,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_cart_outlined),
-            selectedIcon: Icon(
-              Icons.shopping_cart,
-              color: AppColors.primary,
-            ),
-            label: AppStrings.cart,
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outlined),
-            selectedIcon: Icon(
-              Icons.person,
-              color: AppColors.primary,
-            ),
-            label: AppStrings.profile,
-          ),
-        ],
+        ),
       ),
     );
   }

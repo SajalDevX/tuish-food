@@ -75,4 +75,14 @@ abstract class CheckoutRepository {
     required PaymentMethod method,
     required double amount,
   });
+  Future<Either<Failure, Map<String, dynamic>>> createRazorpayOrder({
+    required double amount,
+    required String receipt,
+  });
+  Future<Either<Failure, String>> verifyRazorpayPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required Map<String, dynamic> orderData,
+  });
 }

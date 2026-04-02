@@ -1,6 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
-import 'package:tuish_food/core/constants/app_typography.dart';
 
 class TuishAppBar extends StatelessWidget implements PreferredSizeWidget {
   const TuishAppBar({
@@ -32,34 +32,39 @@ class TuishAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.textOnDark : AppColors.textPrimary;
     final canPop = ModalRoute.of(context)?.canPop ?? false;
 
-    return AppBar(
-      title: titleWidget ??
-          (title != null
-              ? Text(
-                  title!,
-                  style: AppTypography.titleLarge.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                )
-              : null),
-      centerTitle: centerTitle,
-      elevation: elevation ?? 0,
-      backgroundColor: backgroundColor ?? AppColors.surface,
-      surfaceTintColor: Colors.transparent,
-      leading: leading ??
-          (showBackButton && canPop
-              ? IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppColors.textPrimary,
-                  ),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                )
-              : null),
-      automaticallyImplyLeading: showBackButton,
-      actions: actions,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: AppBar(
+          title: titleWidget ??
+              (title != null
+                  ? Text(title!, style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ))
+                  : null),
+          centerTitle: centerTitle,
+          elevation: 0,
+          backgroundColor: backgroundColor ?? Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          iconTheme: IconThemeData(color: textColor),
+          leading: leading ??
+              (showBackButton && canPop
+                  ? IconButton(
+                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    )
+                  : null),
+          automaticallyImplyLeading: showBackButton,
+          actions: actions,
+        ),
+      ),
     );
   }
 }

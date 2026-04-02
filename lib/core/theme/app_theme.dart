@@ -18,12 +18,16 @@ abstract final class AppTheme {
         surface: AppColors.surface,
         error: AppColors.error,
       ),
-      scaffoldBackgroundColor: AppColors.scaffoldBackground,
-      textTheme: _textTheme,
+      scaffoldBackgroundColor: AppColors.lightScaffold,
+      textTheme: _textTheme.apply(
+        bodyColor: AppColors.textPrimary,
+        displayColor: AppColors.textPrimary,
+      ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: AppTypography.titleLarge,
       ),
@@ -59,7 +63,7 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.background,
+        fillColor: AppColors.lightGlassFill,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSizes.s16,
           vertical: AppSizes.s16,
@@ -85,19 +89,24 @@ abstract final class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.cardBackground,
-        elevation: AppSizes.elevationCard,
+        color: AppColors.lightGlassFill,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radiusS),
+          borderRadius: AppSizes.borderRadiusL,
         ),
         margin: EdgeInsets.zero,
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
@@ -114,7 +123,7 @@ abstract final class AppTheme {
         side: BorderSide.none,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.lightGlassFill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppSizes.radiusXL),
@@ -144,15 +153,16 @@ abstract final class AppTheme {
         surface: AppColors.darkSurface,
         error: AppColors.error,
       ),
-      scaffoldBackgroundColor: AppColors.darkBackground,
+      scaffoldBackgroundColor: AppColors.darkScaffold,
       textTheme: _textTheme.apply(
         bodyColor: AppColors.textOnDark,
         displayColor: AppColors.textOnDark,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: Colors.transparent,
         foregroundColor: AppColors.textOnDark,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         centerTitle: false,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -167,18 +177,18 @@ abstract final class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.darkCard,
+        fillColor: AppColors.darkGlassFill,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSizes.s16,
           vertical: AppSizes.s16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusM),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: AppColors.darkGlassBorder),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusM),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: AppColors.darkGlassBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusM),
@@ -186,19 +196,24 @@ abstract final class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkCard,
-        elevation: AppSizes.elevationCard,
+        color: AppColors.darkGlassFill,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radiusS),
+          borderRadius: AppSizes.borderRadiusL,
         ),
         margin: EdgeInsets.zero,
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: Colors.transparent,
         selectedItemColor: AppColors.primaryLight,
         unselectedItemColor: AppColors.textHint,
         type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        elevation: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        indicatorColor: AppColors.primaryLight.withValues(alpha: 0.15),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkDivider,
@@ -206,7 +221,7 @@ abstract final class AppTheme {
         space: 0,
       ),
       bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: AppColors.darkSurface,
+        backgroundColor: AppColors.darkGlassFill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppSizes.radiusXL),

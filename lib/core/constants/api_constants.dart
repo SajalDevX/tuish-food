@@ -7,7 +7,9 @@ abstract final class ApiConstants {
   static const String getRevenueReport = 'getRevenueReport';
   static const String getEarningsSummary = 'getEarningsSummary';
   static const String assignDeliveryPartner = 'assignDeliveryPartner';
-  static const String processPayment = 'processPayment';
+  static const String createRazorpayOrder = 'createRazorpayOrder';
+  static const String verifyRazorpayPayment = 'verifyRazorpayPayment';
+  static const String processRazorpayRefund = 'processRazorpayRefund';
   static const String sendPromoNotification = 'sendPromoNotification';
 
   // Timeouts

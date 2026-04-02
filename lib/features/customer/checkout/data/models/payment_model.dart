@@ -9,6 +9,9 @@ class PaymentModel extends Payment {
     required super.status,
     required super.amount,
     super.transactionId,
+    super.razorpayOrderId,
+    super.razorpayPaymentId,
+    super.razorpaySignature,
   });
 
   factory PaymentModel.fromFirestore(DocumentSnapshot doc) {
@@ -19,6 +22,9 @@ class PaymentModel extends Payment {
       status: PaymentStatus.fromString(data['status'] as String? ?? 'pending'),
       amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
       transactionId: data['transactionId'] as String?,
+      razorpayOrderId: data['razorpayOrderId'] as String?,
+      razorpayPaymentId: data['razorpayPaymentId'] as String?,
+      razorpaySignature: data['razorpaySignature'] as String?,
     );
   }
 
@@ -27,7 +33,10 @@ class PaymentModel extends Payment {
       'method': method.firestoreValue,
       'status': status.firestoreValue,
       'amount': amount,
-      'transactionId': transactionId,
+      if (transactionId != null) 'transactionId': transactionId,
+      if (razorpayOrderId != null) 'razorpayOrderId': razorpayOrderId,
+      if (razorpayPaymentId != null) 'razorpayPaymentId': razorpayPaymentId,
+      if (razorpaySignature != null) 'razorpaySignature': razorpaySignature,
     };
   }
 
@@ -38,6 +47,9 @@ class PaymentModel extends Payment {
       status: payment.status,
       amount: payment.amount,
       transactionId: payment.transactionId,
+      razorpayOrderId: payment.razorpayOrderId,
+      razorpayPaymentId: payment.razorpayPaymentId,
+      razorpaySignature: payment.razorpaySignature,
     );
   }
 }

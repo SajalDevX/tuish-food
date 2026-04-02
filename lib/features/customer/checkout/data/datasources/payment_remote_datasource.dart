@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tuish_food/core/constants/api_constants.dart';
 import 'package:tuish_food/core/constants/firebase_constants.dart';
 import 'package:tuish_food/core/enums/order_status.dart';
 import 'package:tuish_food/core/enums/payment_status.dart';
@@ -19,15 +21,27 @@ abstract class PaymentRemoteDatasource {
     required PaymentMethod method,
     required double amount,
   });
+  Future<Map<String, dynamic>> createRazorpayOrder({
+    required double amount,
+    required String receipt,
+  });
+  Future<String> verifyRazorpayPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required Map<String, dynamic> orderData,
+  });
 }
 
 class PaymentRemoteDatasourceImpl implements PaymentRemoteDatasource {
   final FirebaseFirestore firestore;
   final FirebaseAuth auth;
+  final FirebaseFunctions functions;
 
   const PaymentRemoteDatasourceImpl({
     required this.firestore,
     required this.auth,
+    required this.functions,
   });
 
   @override
@@ -154,25 +168,76 @@ class PaymentRemoteDatasourceImpl implements PaymentRemoteDatasource {
         );
       }
 
-      // For card payment, in production this would call a Cloud Function
-      // that integrates with Stripe. For now, simulate success.
-      await firestore
-          .collection(FirebaseConstants.ordersCollection)
-          .doc(orderId)
-          .update({
-            'paymentStatus': PaymentStatus.completed.firestoreValue,
-            'paymentMethod': method.firestoreValue,
-          });
-
-      return PaymentModel(
-        id: orderId,
-        method: method,
-        status: PaymentStatus.completed,
-        amount: amount,
-        transactionId: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      // For razorpay, payment is handled on the client side via Razorpay SDK.
+      // The datasource should not process Razorpay payments directly.
+      // Use createRazorpayOrder() and verifyRazorpayPayment() instead.
+      throw const ServerException(
+        'Razorpay payments must be processed via createRazorpayOrder '
+        'and verifyRazorpayPayment',
       );
     } catch (e) {
       throw ServerException('Payment processing failed: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> createRazorpayOrder({
+    required double amount,
+    required String receipt,
+  }) async {
+    try {
+      final callable = functions.httpsCallable(
+        ApiConstants.createRazorpayOrder,
+        options: HttpsCallableOptions(timeout: ApiConstants.defaultTimeout),
+      );
+
+      final result = await callable.call<Map<String, dynamic>>({
+        'amount': amount,
+        'receipt': receipt,
+      });
+
+      final data = Map<String, dynamic>.from(result.data);
+      return {
+        'razorpayOrderId': data['razorpayOrderId'] as String,
+        'amount': (data['amount'] as num).toDouble(),
+      };
+    } on FirebaseFunctionsException catch (e) {
+      throw ServerException(
+        e.message ?? 'Failed to create Razorpay order',
+      );
+    } catch (e) {
+      throw ServerException('Failed to create Razorpay order: $e');
+    }
+  }
+
+  @override
+  Future<String> verifyRazorpayPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required Map<String, dynamic> orderData,
+  }) async {
+    try {
+      final callable = functions.httpsCallable(
+        ApiConstants.verifyRazorpayPayment,
+        options: HttpsCallableOptions(timeout: ApiConstants.longTimeout),
+      );
+
+      final result = await callable.call<Map<String, dynamic>>({
+        'razorpayOrderId': razorpayOrderId,
+        'razorpayPaymentId': razorpayPaymentId,
+        'razorpaySignature': razorpaySignature,
+        'orderData': orderData,
+      });
+
+      final data = Map<String, dynamic>.from(result.data);
+      return data['orderId'] as String;
+    } on FirebaseFunctionsException catch (e) {
+      throw ServerException(
+        e.message ?? 'Payment verification failed',
+      );
+    } catch (e) {
+      throw ServerException('Payment verification failed: $e');
     }
   }
 }

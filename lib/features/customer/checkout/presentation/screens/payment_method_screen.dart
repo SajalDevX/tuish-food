@@ -56,9 +56,10 @@ class _PaymentMethodScreenState extends ConsumerState<PaymentMethodScreen> {
             const SizedBox(height: AppSizes.s12),
 
             PaymentMethodTile(
-              method: PaymentMethod.card,
-              isSelected: _selectedMethod == PaymentMethod.card,
-              onTap: () => setState(() => _selectedMethod = PaymentMethod.card),
+              method: PaymentMethod.razorpay,
+              isSelected: _selectedMethod == PaymentMethod.razorpay,
+              onTap: () =>
+                  setState(() => _selectedMethod = PaymentMethod.razorpay),
             ),
           ],
         ),

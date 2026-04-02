@@ -22,7 +22,7 @@ class RecentOrdersTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: AppSizes.borderRadiusM,
         boxShadow: [
           BoxShadow(

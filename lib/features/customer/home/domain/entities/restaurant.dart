@@ -56,6 +56,7 @@ class Restaurant extends Equatable {
   final double averageRating;
   final int totalRatings;
   final int totalOrders;
+  final String? ownerUid;
   final RestaurantAddress address;
   final List<OperatingHours> operatingHours;
 
@@ -77,6 +78,7 @@ class Restaurant extends Equatable {
     required this.averageRating,
     required this.totalRatings,
     required this.totalOrders,
+    this.ownerUid,
     required this.address,
     required this.operatingHours,
   });
@@ -109,6 +111,7 @@ class Restaurant extends Equatable {
         averageRating,
         totalRatings,
         totalOrders,
+        ownerUid,
         address,
         operatingHours,
       ];

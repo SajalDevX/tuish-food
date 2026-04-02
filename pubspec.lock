@@ -345,6 +345,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.8"
+  eventify:
+    dependency: transitive
+    description:
+      name: eventify
+      sha256: b829429f08586cc2001c628e7499e3e3c2493a1d895fd73b00ecb23351aa5a66
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   fake_async:
     dependency: transitive
     description:
@@ -619,14 +627,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.3.1"
-  flutter_stripe:
-    dependency: "direct main"
-    description:
-      name: flutter_stripe
-      sha256: "410f025b27fe5dd03507444a947c44fe8e27eb89483620a70ed6a257b4aff1ba"
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.4.0"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -1335,6 +1335,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
+  razorpay_flutter:
+    dependency: "direct main"
+    description:
+      name: razorpay_flutter
+      sha256: "8d985b769808cb6c8d3f2fbcc25f9ab78e29191965c31c98e2d69d55d9d20ff1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.3"
   riverpod:
     dependency: transitive
     description:
@@ -1620,30 +1628,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
-  stripe_android:
-    dependency: transitive
-    description:
-      name: stripe_android
-      sha256: "270c9e400f2a0cdff58775c62a088903c743dd970da8d3bc54cd9bd9a1bb2d2c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.4.0"
-  stripe_ios:
-    dependency: transitive
-    description:
-      name: stripe_ios
-      sha256: d186356a101bc2e5b2a15c1bd93e39fd86aca071dc7f8af5f4bdab8b0c43c225
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.4.0"
-  stripe_platform_interface:
-    dependency: transitive
-    description:
-      name: stripe_platform_interface
-      sha256: "6b2867fca1c02a83f4c39f1da16feea61073a2ccf69af1616fcc7e14a68f4a71"
-      url: "https://pub.dev"
-    source: hosted
-    version: "12.4.0"
   sync_http:
     dependency: transitive
     description:

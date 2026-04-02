@@ -52,7 +52,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final currentQuery = ref.watch(searchQueryProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,

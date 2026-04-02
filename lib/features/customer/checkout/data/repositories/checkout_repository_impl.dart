@@ -61,4 +61,44 @@ class CheckoutRepositoryImpl implements CheckoutRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> createRazorpayOrder({
+    required double amount,
+    required String receipt,
+  }) async {
+    try {
+      final result = await remoteDatasource.createRazorpayOrder(
+        amount: amount,
+        receipt: receipt,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> verifyRazorpayPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required Map<String, dynamic> orderData,
+  }) async {
+    try {
+      final result = await remoteDatasource.verifyRazorpayPayment(
+        razorpayOrderId: razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId,
+        razorpaySignature: razorpaySignature,
+        orderData: orderData,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

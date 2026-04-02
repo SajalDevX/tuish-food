@@ -228,6 +228,7 @@ class UserDetailScreen extends ConsumerWidget {
     return switch (role) {
       UserRole.admin => AppColors.primary,
       UserRole.deliveryPartner => AppColors.secondary,
+      UserRole.restaurantOwner => AppColors.warning,
       UserRole.customer => AppColors.info,
     };
   }

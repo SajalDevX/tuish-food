@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
@@ -20,8 +21,7 @@ class CustomerHomeScreen extends ConsumerWidget {
     final nearbyRestaurants = ref.watch(nearbyRestaurantsProvider);
     final categories = ref.watch(categoriesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+    return GlassScaffold(
       body: SafeArea(
         child: RefreshIndicator(
           color: AppColors.primary,

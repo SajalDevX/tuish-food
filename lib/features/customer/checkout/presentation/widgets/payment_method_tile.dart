@@ -18,14 +18,14 @@ class PaymentMethodTile extends StatelessWidget {
 
   IconData get _icon {
     return switch (method) {
-      PaymentMethod.card => Icons.credit_card,
+      PaymentMethod.razorpay => Icons.account_balance_wallet,
       PaymentMethod.cashOnDelivery => Icons.money,
     };
   }
 
   String get _subtitle {
     return switch (method) {
-      PaymentMethod.card => 'Pay using credit or debit card',
+      PaymentMethod.razorpay => 'Pay securely via Razorpay (UPI, cards, etc.)',
       PaymentMethod.cashOnDelivery => 'Pay when your order arrives',
     };
   }

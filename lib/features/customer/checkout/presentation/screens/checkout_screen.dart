@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
@@ -18,20 +19,209 @@ import 'package:tuish_food/features/customer/checkout/presentation/widgets/payme
 import 'package:tuish_food/features/customer/checkout/presentation/widgets/tip_selector.dart';
 import 'package:tuish_food/routing/route_names.dart';
 
-class CheckoutScreen extends ConsumerWidget {
+class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
+  late final Razorpay _razorpay;
+  PlaceOrderParams? _pendingOrderParams;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final checkoutNotifier = ref.read(checkoutNotifierProvider.notifier);
+
+    if (response.orderId == null ||
+        response.paymentId == null ||
+        response.signature == null) {
+      _showError('Payment verification failed: missing data');
+      return;
+    }
+
+    // Build order data from the pending params
+    final params = _pendingOrderParams;
+    if (params == null) {
+      _showError('Order data lost. Please try again.');
+      return;
+    }
+
+    final orderData = {
+      'restaurantId': params.restaurantId,
+      'restaurantName': params.restaurantName,
+      'items': params.items
+          .map((i) => {
+                'id': i.menuItemId,
+                'name': i.name,
+                'price': i.price,
+                'quantity': i.quantity,
+                'totalPrice': i.price * i.quantity,
+              })
+          .toList(),
+      'deliveryAddressId': params.deliveryAddressId,
+      'deliveryAddress': params.deliveryAddress,
+      'paymentMethod': 'razorpay',
+      'subtotal': params.subtotal,
+      'deliveryFee': params.deliveryFee,
+      'tax': params.taxes,
+      'tip': params.tip,
+      'discount': params.discount,
+      'totalAmount': params.total,
+      if (params.couponCode != null) 'couponCode': params.couponCode,
+      if (params.specialInstructions != null)
+        'specialInstructions': params.specialInstructions,
+    };
+
+    final orderId = await checkoutNotifier.verifyAndPlaceOrder(
+      razorpayOrderId: response.orderId!,
+      paymentId: response.paymentId!,
+      signature: response.signature!,
+      orderData: orderData,
+    );
+
+    if (orderId != null && mounted) {
+      ref.read(cartNotifierProvider.notifier).clear();
+      checkoutNotifier.reset();
+      context.goNamed(
+        RouteNames.orderConfirmation,
+        pathParameters: {'orderId': orderId},
+      );
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    final message = response.message ?? 'Payment failed';
+    _showError(message);
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Redirecting to ${response.walletName}...'),
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
+  Future<void> _onPlaceOrder() async {
+    final cart = ref.read(cartNotifierProvider);
+    final checkoutState = ref.read(checkoutNotifierProvider);
+    final checkoutNotifier = ref.read(checkoutNotifierProvider.notifier);
+
+    const deliveryFee = 40.0;
+    const taxRate = 0.05;
+    final taxes = cart.subtotal * taxRate;
+    final total = cart.subtotal +
+        deliveryFee +
+        taxes +
+        checkoutState.tip -
+        checkoutState.discount;
+
+    final params = PlaceOrderParams(
+      restaurantId: cart.restaurantId ?? '',
+      restaurantName: cart.restaurantName ?? 'Restaurant',
+      items: cart.items
+          .map((item) => OrderItemParam(
+                menuItemId: item.menuItemId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                selectedCustomizations: item.selectedCustomizations,
+              ))
+          .toList(),
+      deliveryAddressId: checkoutState.deliveryAddressId ?? '',
+      deliveryAddress: checkoutState.deliveryAddress ?? '',
+      paymentMethod: checkoutState.paymentMethod,
+      subtotal: cart.subtotal,
+      deliveryFee: deliveryFee,
+      taxes: taxes,
+      tip: checkoutState.tip,
+      discount: checkoutState.discount,
+      total: total,
+      couponCode: checkoutState.couponCode,
+      specialInstructions: checkoutState.specialInstructions,
+    );
+
+    if (checkoutState.paymentMethod == PaymentMethod.cashOnDelivery) {
+      // COD: place order directly
+      final orderId = await checkoutNotifier.placeOrder(params);
+      if (orderId != null && mounted) {
+        ref.read(cartNotifierProvider.notifier).clear();
+        checkoutNotifier.reset();
+        context.goNamed(
+          RouteNames.orderConfirmation,
+          pathParameters: {'orderId': orderId},
+        );
+      }
+    } else {
+      // Razorpay: create server-side order, then open checkout
+      _pendingOrderParams = params;
+      final razorpayOrderId = await checkoutNotifier.createRazorpayOrder(
+        amount: total,
+        receipt: '${cart.restaurantId}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      if (razorpayOrderId == null) return;
+
+      // TODO: Replace with your actual Razorpay key from env
+      const razorpayKeyId = String.fromEnvironment(
+        'RAZORPAY_KEY_ID',
+        defaultValue: 'rzp_test_XXXXXXXX',
+      );
+
+      final options = {
+        'key': razorpayKeyId,
+        'amount': (total * 100).toInt(), // amount in paise
+        'currency': 'INR',
+        'name': 'Tuish Food',
+        'description': 'Order from ${cart.restaurantName ?? "Restaurant"}',
+        'order_id': razorpayOrderId,
+        'prefill': {
+          'email': '', // populated from user profile if available
+        },
+        'theme': {'color': '#FF6B35'},
+        'retry': {'enabled': true, 'max_count': 3},
+      };
+
+      _razorpay.open(options);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cart = ref.watch(cartNotifierProvider);
     final checkoutState = ref.watch(checkoutNotifierProvider);
     final checkoutNotifier = ref.read(checkoutNotifierProvider.notifier);
 
-    final deliveryFee = 40.0;
-    final taxRate = 0.05;
+    const deliveryFee = 40.0;
+    const taxRate = 0.05;
     final taxes = cart.subtotal * taxRate;
-    final total =
-        cart.subtotal +
+    final total = cart.subtotal +
         deliveryFee +
         taxes +
         checkoutState.tip -
@@ -80,21 +270,21 @@ class CheckoutScreen extends ConsumerWidget {
                   Text('Payment Method', style: AppTypography.titleSmall),
                   const SizedBox(height: AppSizes.s12),
                   PaymentMethodTile(
-                    method: PaymentMethod.cashOnDelivery,
+                    method: PaymentMethod.razorpay,
                     isSelected:
-                        checkoutState.paymentMethod ==
-                        PaymentMethod.cashOnDelivery,
+                        checkoutState.paymentMethod == PaymentMethod.razorpay,
                     onTap: () => checkoutNotifier.setPaymentMethod(
-                      PaymentMethod.cashOnDelivery,
+                      PaymentMethod.razorpay,
                     ),
                   ),
                   const SizedBox(height: AppSizes.s8),
                   PaymentMethodTile(
-                    method: PaymentMethod.card,
-                    isSelected:
-                        checkoutState.paymentMethod == PaymentMethod.card,
-                    onTap: () =>
-                        checkoutNotifier.setPaymentMethod(PaymentMethod.card),
+                    method: PaymentMethod.cashOnDelivery,
+                    isSelected: checkoutState.paymentMethod ==
+                        PaymentMethod.cashOnDelivery,
+                    onTap: () => checkoutNotifier.setPaymentMethod(
+                      PaymentMethod.cashOnDelivery,
+                    ),
                   ),
                 ],
               ),
@@ -177,50 +367,7 @@ class CheckoutScreen extends ConsumerWidget {
               isLoading: checkoutState.isPlacingOrder,
               onPressed: checkoutState.deliveryAddress == null
                   ? null
-                  : () async {
-                      final params = PlaceOrderParams(
-                        restaurantId: cart.restaurantId ?? '',
-                        restaurantName: cart.restaurantName ?? 'Restaurant',
-                        items: cart.items
-                            .map(
-                              (item) => OrderItemParam(
-                                menuItemId: item.menuItemId,
-                                name: item.name,
-                                price: item.price,
-                                quantity: item.quantity,
-                                selectedCustomizations:
-                                    item.selectedCustomizations,
-                              ),
-                            )
-                            .toList(),
-                        deliveryAddressId:
-                            checkoutState.deliveryAddressId ?? '',
-                        deliveryAddress: checkoutState.deliveryAddress ?? '',
-                        paymentMethod: checkoutState.paymentMethod,
-                        subtotal: cart.subtotal,
-                        deliveryFee: deliveryFee,
-                        taxes: taxes,
-                        tip: checkoutState.tip,
-                        discount: checkoutState.discount,
-                        total: total,
-                        couponCode: checkoutState.couponCode,
-                        specialInstructions: checkoutState.specialInstructions,
-                      );
-
-                      final orderId = await checkoutNotifier.placeOrder(params);
-
-                      if (orderId != null && context.mounted) {
-                        // Clear cart
-                        ref.read(cartNotifierProvider.notifier).clear();
-                        // Reset checkout state
-                        checkoutNotifier.reset();
-                        // Navigate to confirmation
-                        context.goNamed(
-                          RouteNames.orderConfirmation,
-                          pathParameters: {'orderId': orderId},
-                        );
-                      }
-                    },
+                  : _onPlaceOrder,
             ),
           ),
         ),

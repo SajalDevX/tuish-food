@@ -36,7 +36,21 @@ final authNotifierProvider =
     NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
 // Current user role provider
+//
+// Prefers the auth notifier state (set immediately after role selection or
+// login) over the async claims/Firestore lookup. This avoids the race
+// condition where custom claims haven't refreshed yet but the user has
+// already selected a role.
 final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
+  final authState = ref.watch(authNotifierProvider);
+
+  // Fast path: auth notifier already knows the role (e.g. after login or
+  // role selection). Trust it — it reflects the latest user intent.
+  if (authState is Authenticated) {
+    return authState.user.role;
+  }
+
+  // Slow path: check custom claims + Firestore via repository
   final repository = ref.watch(authRepositoryProvider);
   final result = await repository.getUserRole();
   return result.fold(
@@ -172,6 +186,8 @@ class AuthNotifier extends Notifier<AuthState> {
           }
         },
       );
+      // Invalidate so the router picks up the new role immediately
+      ref.invalidate(currentUserRoleProvider);
     } catch (e) {
       state = AuthError(e.toString());
     }

@@ -34,7 +34,6 @@ class AddMenuItemScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       appBar: const TuishAppBar(title: 'Add Menu Item'),
       body: MenuItemForm(
         isLoading: isLoading,

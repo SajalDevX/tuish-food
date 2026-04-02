@@ -22,7 +22,6 @@ class AdminDashboardScreen extends ConsumerWidget {
     final selectedPeriod = ref.watch(selectedPeriodProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       appBar: TuishAppBar(
         title: 'Admin Dashboard',
         showBackButton: false,

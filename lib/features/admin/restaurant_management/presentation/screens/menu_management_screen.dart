@@ -25,7 +25,6 @@ class MenuManagementScreen extends ConsumerWidget {
     final menuItemsAsync = ref.watch(menuItemsProvider(restaurantId));
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       appBar: TuishAppBar(
         title: 'Menu Management',
         actions: [
@@ -131,7 +130,7 @@ class _MenuItemTile extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.s8),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: AppSizes.borderRadiusM,
         boxShadow: [
           BoxShadow(

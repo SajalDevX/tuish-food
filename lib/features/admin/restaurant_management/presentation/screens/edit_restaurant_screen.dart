@@ -201,7 +201,6 @@ class _EditRestaurantScreenState extends ConsumerState<EditRestaurantScreen> {
         return LoadingOverlay(
           isLoading: isLoading,
           child: Scaffold(
-            backgroundColor: AppColors.scaffoldBackground,
             appBar: const TuishAppBar(title: 'Edit Restaurant'),
             body: Form(
               key: _formKey,

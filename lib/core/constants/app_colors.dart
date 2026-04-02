@@ -55,4 +55,18 @@ abstract final class AppColors {
   static const Color darkBackground = Color(0xFF121212);
   static const Color darkCard = Color(0xFF2C2C2C);
   static const Color darkDivider = Color(0xFF424242);
+
+  // ─── Glass Theme Colors ──────────────────────────────────────────────────
+  // Dark mode glass
+  static const Color darkGlassFill = Color(0x1AFFFFFF);       // white @ 10%
+  static const Color darkGlassBorder = Color(0x26FFFFFF);      // white @ 15%
+  static const Color darkGlassStroke = Color(0x33FFFFFF);      // white @ 20%
+  static const Color darkScaffold = Color(0xFF0D1117);
+  static const Color darkSurfaceDim = Color(0xFF161B22);
+
+  // Light mode glass
+  static const Color lightGlassFill = Color(0xB3FFFFFF);       // white @ 70%
+  static const Color lightGlassBorder = Color(0x4DFFFFFF);     // white @ 30%
+  static const Color lightGlassStroke = Color(0x66FFFFFF);     // white @ 40%
+  static const Color lightScaffold = Color(0xFFF0F2F5);
 }
