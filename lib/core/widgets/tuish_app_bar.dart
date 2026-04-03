@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 
@@ -14,9 +13,9 @@ class TuishAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.elevation,
     this.backgroundColor,
   }) : assert(
-          title == null || titleWidget == null,
-          'Cannot provide both title and titleWidget',
-        );
+         title == null || titleWidget == null,
+         'Cannot provide both title and titleWidget',
+       );
 
   final String? title;
   final Widget? titleWidget;
@@ -33,36 +32,45 @@ class TuishAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? AppColors.textOnDark : AppColors.textPrimary;
+    final textColor = isDark ? AppColors.glassTextBody : AppColors.textPrimary;
     final canPop = ModalRoute.of(context)?.canPop ?? false;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: AppBar(
-          title: titleWidget ??
-              (title != null
-                  ? Text(title!, style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ))
-                  : null),
-          centerTitle: centerTitle,
-          elevation: 0,
-          backgroundColor: backgroundColor ?? Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          iconTheme: IconThemeData(color: textColor),
-          leading: leading ??
-              (showBackButton && canPop
-                  ? IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor),
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    )
-                  : null),
-          automaticallyImplyLeading: showBackButton,
-          actions: actions,
+    return AppBar(
+      title:
+          titleWidget ??
+          (title != null
+              ? Text(
+                  title!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(color: textColor),
+                )
+              : null),
+      centerTitle: centerTitle,
+      elevation: elevation ?? 0,
+      backgroundColor:
+          backgroundColor ??
+          (isDark ? AppColors.darkSurface : AppColors.surface),
+      surfaceTintColor: Colors.transparent,
+      iconTheme: IconThemeData(color: textColor),
+      leading:
+          leading ??
+          (showBackButton && canPop
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: textColor,
+                  ),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                )
+              : null),
+      automaticallyImplyLeading: showBackButton,
+      actions: actions,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Divider(
+          height: 1,
+          color: isDark ? AppColors.darkDivider : AppColors.divider,
         ),
       ),
     );

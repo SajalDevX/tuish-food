@@ -39,6 +39,17 @@ class TuishTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fillColor = isDark ? AppColors.darkCard : AppColors.surface;
+    final disabledFillColor = isDark
+        ? AppColors.darkCard.withValues(alpha: 0.65)
+        : AppColors.background;
+    final borderColor = isDark ? AppColors.darkDivider : AppColors.divider;
+    final labelHintColor = isDark
+        ? AppColors.glassTextSecondary
+        : AppColors.textSecondary;
+    final textColor = isDark ? AppColors.glassTextBody : AppColors.textPrimary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -46,7 +57,7 @@ class TuishTextField extends StatelessWidget {
         if (label != null) ...[
           Text(
             label!,
-            style: AppTypography.labelLarge,
+            style: AppTypography.labelLarge.copyWith(color: labelHintColor),
           ),
           const SizedBox(height: AppSizes.s8),
         ],
@@ -61,34 +72,29 @@ class TuishTextField extends StatelessWidget {
           autofillHints: autofillHints,
           textInputAction: textInputAction,
           focusNode: focusNode,
-          style: AppTypography.bodyLarge,
+          style: AppTypography.bodyLarge.copyWith(color: textColor),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: AppTypography.bodyLarge.copyWith(
-              color: AppColors.textHint,
-            ),
+            hintStyle: AppTypography.bodyLarge.copyWith(color: labelHintColor),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: enabled ? AppColors.surface : AppColors.background,
+            fillColor: enabled ? fillColor : disabledFillColor,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSizes.s16,
               vertical: AppSizes.s16,
             ),
             border: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
-              borderSide: const BorderSide(color: AppColors.divider),
+              borderSide: BorderSide(color: borderColor),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
-              borderSide: const BorderSide(color: AppColors.divider),
+              borderSide: BorderSide(color: borderColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
-              borderSide: const BorderSide(
-                color: AppColors.primary,
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
@@ -96,16 +102,11 @@ class TuishTextField extends StatelessWidget {
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
-              borderSide: const BorderSide(
-                color: AppColors.error,
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: AppColors.error, width: 2),
             ),
             disabledBorder: OutlineInputBorder(
               borderRadius: AppSizes.borderRadiusM,
-              borderSide: BorderSide(
-                color: AppColors.divider.withValues(alpha: 0.5),
-              ),
+              borderSide: BorderSide(color: borderColor.withValues(alpha: 0.5)),
             ),
           ),
         ),

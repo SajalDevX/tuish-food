@@ -10,6 +10,7 @@ import 'package:tuish_food/features/customer/menu/domain/entities/menu_category.
 import 'package:tuish_food/features/customer/menu/domain/entities/menu_item.dart';
 import 'package:tuish_food/features/customer/menu/presentation/providers/menu_provider.dart';
 import 'package:tuish_food/features/customer/menu/presentation/widgets/item_detail_bottom_sheet.dart';
+import 'package:tuish_food/core/widgets/staggered_fade_slide.dart';
 import 'package:tuish_food/features/customer/menu/presentation/widgets/menu_item_card.dart';
 
 class MenuScreen extends ConsumerWidget {
@@ -261,7 +262,9 @@ class _MenuTabViewState extends ConsumerState<_MenuTabView>
                   final item = items[index];
                   final quantity = cartNotifier.getSimpleItemQuantity(item.id);
 
-                  return MenuItemCard(
+                  return StaggeredFadeSlide(
+                    index: index,
+                    child: MenuItemCard(
                     item: item,
                     quantity: quantity,
                     onTap: () {
@@ -306,6 +309,7 @@ class _MenuTabViewState extends ConsumerState<_MenuTabView>
                     onDecrement: () {
                       cartNotifier.decrementSimpleItem(item.id);
                     },
+                  ),
                   );
                 },
               );

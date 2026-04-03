@@ -7,6 +7,7 @@ import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/cached_image.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/rating_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/customer/home/domain/entities/restaurant.dart';
@@ -24,7 +25,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final restaurantAsync = ref.watch(restaurantDetailProvider(restaurantId));
 
-    return Scaffold(
+    return GlassScaffold(
       body: restaurantAsync.when(
         data: (restaurant) => _buildContent(context, restaurant),
         loading: () => _buildLoadingState(),
@@ -56,29 +57,32 @@ class RestaurantDetailScreen extends ConsumerWidget {
             ),
           ),
           flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                CachedImage(
-                  imageUrl: restaurant.coverImageUrl.isNotEmpty
-                      ? restaurant.coverImageUrl
-                      : restaurant.imageUrl,
-                  fit: BoxFit.cover,
-                ),
-                // Gradient overlay for readability
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black54,
-                      ],
+            background: Hero(
+              tag: 'restaurant_image_$restaurantId',
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedImage(
+                    imageUrl: restaurant.coverImageUrl.isNotEmpty
+                        ? restaurant.coverImageUrl
+                        : restaurant.imageUrl,
+                    fit: BoxFit.cover,
+                  ),
+                  // Gradient overlay for readability
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black54,
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [

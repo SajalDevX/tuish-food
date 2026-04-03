@@ -12,6 +12,7 @@ import 'package:tuish_food/features/customer/home/presentation/widgets/category_
 import 'package:tuish_food/features/customer/home/presentation/widgets/promo_banner.dart';
 import 'package:tuish_food/features/customer/home/presentation/widgets/restaurant_card.dart';
 import 'package:tuish_food/features/customer/home/presentation/widgets/search_bar_widget.dart';
+import 'package:tuish_food/core/widgets/staggered_fade_slide.dart';
 
 class CustomerHomeScreen extends ConsumerWidget {
   const CustomerHomeScreen({super.key});
@@ -20,6 +21,7 @@ class CustomerHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nearbyRestaurants = ref.watch(nearbyRestaurantsProvider);
     final categories = ref.watch(categoriesProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GlassScaffold(
       body: SafeArea(
@@ -54,12 +56,18 @@ class CustomerHomeScreen extends ConsumerWidget {
                           children: [
                             Text(
                               'Deliver to',
-                              style: AppTypography.labelSmall,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark
+                                    ? AppColors.glassTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
                             ),
                             Text(
                               'Current Location',
                               style: AppTypography.titleSmall.copyWith(
-                                color: AppColors.textPrimary,
+                                color: isDark
+                                    ? AppColors.glassTextPrimary
+                                    : AppColors.textPrimary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -68,9 +76,11 @@ class CustomerHomeScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.notifications_outlined,
-                          color: AppColors.textPrimary,
+                          color: isDark
+                              ? AppColors.glassTextBody
+                              : AppColors.textPrimary,
                         ),
                         onPressed: () {
                           // Navigate to notifications
@@ -111,7 +121,11 @@ class CustomerHomeScreen extends ConsumerWidget {
                   ),
                   child: Text(
                     AppStrings.categories,
-                    style: AppTypography.titleMedium,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: isDark
+                          ? AppColors.glassTextPrimary
+                          : AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),
@@ -127,7 +141,7 @@ class CustomerHomeScreen extends ConsumerWidget {
                       ),
                       itemCount: cats.length,
                       separatorBuilder: (_, _) =>
-                          const SizedBox(width: AppSizes.s4),
+                          const SizedBox(width: AppSizes.s12),
                       itemBuilder: (context, index) {
                         return CategoryChip(
                           category: cats[index],
@@ -138,9 +152,8 @@ class CustomerHomeScreen extends ConsumerWidget {
                       },
                     ),
                     loading: () => _buildCategoryShimmer(),
-                    error: (_, _) => const Center(
-                      child: Text('Failed to load categories'),
-                    ),
+                    error: (_, _) =>
+                        const Center(child: Text('Failed to load categories')),
                   ),
                 ),
               ),
@@ -159,7 +172,11 @@ class CustomerHomeScreen extends ConsumerWidget {
                     children: [
                       Text(
                         AppStrings.nearbyRestaurants,
-                        style: AppTypography.titleMedium,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: isDark
+                              ? AppColors.glassTextPrimary
+                              : AppColors.textPrimary,
+                        ),
                       ),
                       Text(
                         AppStrings.seeAll,
@@ -192,17 +209,16 @@ class CustomerHomeScreen extends ConsumerWidget {
                     sliver: SliverList.builder(
                       itemCount: restaurants.length,
                       itemBuilder: (context, index) {
-                        return RestaurantCard(
-                          restaurant: restaurants[index],
+                        return StaggeredFadeSlide(
+                          index: index,
+                          child: RestaurantCard(restaurant: restaurants[index]),
                         );
                       },
                     ),
                   );
                 },
                 loading: () => SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.s16,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.s16),
                   sliver: SliverList.builder(
                     itemCount: 3,
                     itemBuilder: (context, index) =>
@@ -223,9 +239,7 @@ class CustomerHomeScreen extends ConsumerWidget {
               ),
 
               // Bottom spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSizes.s32),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s32)),
             ],
           ),
         ),

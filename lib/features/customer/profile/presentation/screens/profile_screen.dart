@@ -7,6 +7,7 @@ import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/confirmation_dialog.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
 import 'package:tuish_food/features/customer/profile/presentation/widgets/profile_avatar.dart';
@@ -24,7 +25,7 @@ class ProfileScreen extends ConsumerWidget {
     final phone = currentUser?.phoneNumber;
     final photoUrl = currentUser?.photoURL;
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: const TuishAppBar(
         title: AppStrings.profile,
         showBackButton: false,
@@ -32,7 +33,8 @@ class ProfileScreen extends ConsumerWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const SizedBox(height: AppSizes.s24),
+            // Account for the glass AppBar overlapping the body
+            SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight + AppSizes.s16),
 
             // Avatar and info
             ProfileAvatar(

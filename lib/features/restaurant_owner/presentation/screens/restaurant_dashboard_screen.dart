@@ -9,6 +9,7 @@ import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/core/widgets/status_badge.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_card.dart';
 import 'package:tuish_food/features/customer/home/domain/entities/restaurant.dart';
 import 'package:tuish_food/features/restaurant_owner/presentation/providers/restaurant_owner_provider.dart';
@@ -39,7 +40,7 @@ class RestaurantDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildNoRestaurant(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
         appBar: const TuishAppBar(
           title: 'Dashboard',
           showBackButton: false,
@@ -86,7 +87,7 @@ class RestaurantDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     Restaurant restaurant,
   ) {
-    return Scaffold(
+    return GlassScaffold(
       appBar: const TuishAppBar(
         title: 'Dashboard',
         showBackButton: false,
@@ -348,7 +349,7 @@ class _StatCard extends StatelessWidget {
     return TuishCard(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSizes.s12,
-        vertical: AppSizes.s16,
+        vertical: AppSizes.s20,
       ),
       child: Column(
         children: [

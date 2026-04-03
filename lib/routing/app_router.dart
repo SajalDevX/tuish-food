@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -144,38 +145,38 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.login,
         name: RouteNames.login,
-        builder: (context, state) => const LoginScreen(),
+        pageBuilder: (context, state) => _fadeThrough(state, const LoginScreen()),
       ),
       GoRoute(
         path: RoutePaths.register,
         name: RouteNames.register,
-        builder: (context, state) =>
-            const RegisterScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThrough(state, const RegisterScreen()),
       ),
       GoRoute(
         path: RoutePaths.phoneVerify,
         name: RouteNames.phoneVerify,
-        builder: (context, state) =>
-            const PhoneVerificationScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThrough(state, const PhoneVerificationScreen()),
       ),
       GoRoute(
         path: RoutePaths.forgotPassword,
         name: RouteNames.forgotPassword,
-        builder: (context, state) =>
-            const ForgotPasswordScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThrough(state, const ForgotPasswordScreen()),
       ),
       GoRoute(
         path: RoutePaths.roleSelection,
         name: RouteNames.roleSelection,
-        builder: (context, state) =>
-            const RoleSelectionScreen(),
+        pageBuilder: (context, state) =>
+            _fadeThrough(state, const RoleSelectionScreen()),
       ),
 
       // ---- Checkout routes (full screen, no shell) ----
       GoRoute(
         path: RoutePaths.checkout,
         name: RouteNames.checkout,
-        builder: (context, state) => const CheckoutScreen(),
+        pageBuilder: (context, state) => _slideUp(state, const CheckoutScreen()),
         routes: [
           GoRoute(
             path: 'address',
@@ -216,9 +217,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'restaurant/:id',
                     name: RouteNames.restaurantDetail,
-                    builder: (context, state) {
+                    pageBuilder: (context, state) {
                       final id = state.pathParameters['id']!;
-                      return RestaurantDetailScreen(restaurantId: id);
+                      return _slideUp(state, RestaurantDetailScreen(restaurantId: id));
                     },
                   ),
                   GoRoute(
@@ -433,7 +434,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.restaurantSetup,
         name: RouteNames.restaurantSetup,
-        builder: (context, state) => const RestaurantSetupScreen(),
+        pageBuilder: (context, state) => _slideUp(state, const RestaurantSetupScreen()),
       ),
 
       // ---- Restaurant owner shell (bottom nav) ----
@@ -646,6 +647,33 @@ String _homePathForRole(UserRole? role) {
 
 String _landingPathForRole(UserRole? role) {
   return role == null ? RoutePaths.roleSelection : _homePathForRole(role);
+}
+
+CustomTransitionPage<void> _fadeThrough(GoRouterState state, Widget child) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 300),
+    transitionsBuilder: (_, animation, _, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
+CustomTransitionPage<void> _slideUp(GoRouterState state, Widget child) {
+  return CustomTransitionPage(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 350),
+    transitionsBuilder: (_, animation, _, child) {
+      final tween = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
+          .chain(CurveTween(curve: Curves.easeOutCubic));
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: FadeTransition(opacity: animation, child: child),
+      );
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------

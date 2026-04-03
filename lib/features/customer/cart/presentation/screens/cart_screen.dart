@@ -7,7 +7,9 @@ import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/confirmation_dialog.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
+import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/features/customer/cart/presentation/providers/cart_provider.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_item_tile.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_summary.dart';
@@ -31,8 +33,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final cartNotifier = ref.read(cartNotifierProvider.notifier);
 
     if (cart.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text(AppStrings.cart)),
+      return GlassScaffold(
+        extendBodyBehindAppBar: false,
+        appBar: const TuishAppBar(title: AppStrings.cart, centerTitle: false),
         body: EmptyStateWidget(
           message: 'Your cart is empty.\nBrowse restaurants to add items.',
           icon: Icons.shopping_cart_outlined,
@@ -42,9 +45,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.cart),
+    return GlassScaffold(
+      extendBodyBehindAppBar: false,
+      appBar: TuishAppBar(
+        title: AppStrings.cart,
+        centerTitle: false,
         actions: [
           TextButton(
             onPressed: () async {

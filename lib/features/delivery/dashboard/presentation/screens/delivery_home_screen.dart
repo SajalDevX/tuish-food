@@ -7,6 +7,7 @@ import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/utils/formatters.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_card.dart';
 import 'package:tuish_food/features/delivery/dashboard/presentation/providers/delivery_dashboard_provider.dart';
@@ -23,7 +24,7 @@ class DeliveryHomeScreen extends ConsumerWidget {
     final availableOrders = ref.watch(availableOrdersProvider);
     final deliveryHistory = ref.watch(deliveryHistoryProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: TuishAppBar(
         title: AppStrings.appName,
         showBackButton: false,

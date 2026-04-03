@@ -7,6 +7,7 @@ import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/features/customer/home/presentation/providers/search_provider.dart';
 import 'package:tuish_food/features/customer/home/presentation/widgets/restaurant_list_tile.dart';
 
@@ -51,7 +52,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final searchResults = ref.watch(searchResultsProvider);
     final currentQuery = ref.watch(searchQueryProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,

@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
+import 'package:tuish_food/core/widgets/staggered_fade_slide.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/enums/order_status.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/status_badge.dart';
 import 'package:tuish_food/features/customer/orders/domain/entities/order.dart';
 import 'package:tuish_food/features/restaurant_owner/presentation/providers/restaurant_owner_provider.dart';
@@ -47,7 +49,7 @@ class _OwnerOrdersScreenState extends ConsumerState<OwnerOrdersScreen>
   Widget build(BuildContext context) {
     final ordersAsync = ref.watch(myRestaurantOrdersProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Orders'),
         automaticallyImplyLeading: false,
@@ -87,7 +89,10 @@ class _OwnerOrdersScreenState extends ConsumerState<OwnerOrdersScreen>
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: AppSizes.s8),
                   itemBuilder: (context, index) {
-                    return _OrderCard(order: filtered[index]);
+                    return StaggeredFadeSlide(
+                      index: index,
+                      child: _OrderCard(order: filtered[index]),
+                    );
                   },
                 ),
               );

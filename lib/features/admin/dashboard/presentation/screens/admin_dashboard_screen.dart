@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/features/admin/dashboard/presentation/providers/admin_dashboard_provider.dart';
 import 'package:tuish_food/features/admin/dashboard/presentation/widgets/recent_orders_table.dart';
@@ -21,7 +22,7 @@ class AdminDashboardScreen extends ConsumerWidget {
     final recentOrdersAsync = ref.watch(recentOrdersProvider);
     final selectedPeriod = ref.watch(selectedPeriodProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: TuishAppBar(
         title: 'Admin Dashboard',
         showBackButton: false,

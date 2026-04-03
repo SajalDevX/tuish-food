@@ -21,7 +21,10 @@ abstract final class AppSizes {
   static const EdgeInsets paddingHorizontalL =
       EdgeInsets.symmetric(horizontal: 24.0);
   static const EdgeInsets screenPadding =
-      EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0);
+      EdgeInsets.symmetric(horizontal: s16, vertical: s16);
+
+  static const double cardGap = s12;
+  static const double sectionGap = s24;
 
   // Border Radius
   static const double radiusS = 8.0;

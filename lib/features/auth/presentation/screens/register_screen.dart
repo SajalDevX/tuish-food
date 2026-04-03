@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tuish_food/core/constants/app_colors.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/routing/route_paths.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
@@ -39,7 +40,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   void _onRegister() {
     if (_formKey.currentState?.validate() ?? false) {
-      ref.read(authNotifierProvider.notifier).signUpWithEmail(
+      ref
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmail(
             _emailController.text.trim(),
             _passwordController.text,
             _nameController.text.trim(),
@@ -107,7 +110,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     });
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => context.pop(),
@@ -125,10 +128,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: AppSizes.s16),
 
                 // Header
-                Text(
-                  'Create Account',
-                  style: theme.textTheme.headlineLarge,
-                ),
+                Text('Create Account', style: theme.textTheme.headlineLarge),
                 const SizedBox(height: AppSizes.s8),
                 Text(
                   'Sign up to start ordering your favorite food',
@@ -227,7 +227,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: AppColors.onPrimary,
                           ),
                         )
                       : const Text(AppStrings.signUp),

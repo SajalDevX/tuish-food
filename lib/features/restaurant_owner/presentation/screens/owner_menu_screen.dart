@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
+import 'package:tuish_food/core/widgets/staggered_fade_slide.dart';
+import 'package:tuish_food/core/widgets/tuish_card.dart';
 import 'package:tuish_food/features/customer/menu/domain/entities/menu_item.dart';
 import 'package:tuish_food/features/restaurant_owner/presentation/providers/restaurant_owner_provider.dart';
 import 'package:tuish_food/routing/route_paths.dart';
@@ -18,7 +21,7 @@ class OwnerMenuScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final menuAsync = ref.watch(myMenuItemsProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: const TuishAppBar(
         title: 'Menu',
         showBackButton: false,
@@ -94,7 +97,10 @@ class _MenuList extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSizes.s8),
-            ...categoryItems.map((item) => _MenuItemCard(item: item)),
+            ...categoryItems.indexed.map((entry) => StaggeredFadeSlide(
+              index: entry.$1,
+              child: _MenuItemCard(item: entry.$2),
+            )),
           ],
         );
       },
@@ -126,13 +132,9 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSizes.s8),
-      elevation: AppSizes.elevationCard,
-      shape: RoundedRectangleBorder(borderRadius: AppSizes.borderRadiusM),
-      color: Theme.of(context).cardColor,
-      child: InkWell(
-        borderRadius: AppSizes.borderRadiusM,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSizes.s12),
+      child: TuishCard(
         onTap: () {
           context.push(
             RoutePaths.restaurantEditMenuItem.replaceFirst(
@@ -141,90 +143,91 @@ class _MenuItemCardState extends ConsumerState<_MenuItemCard> {
             ),
           );
         },
-        child: Padding(
-          padding: AppSizes.paddingAllM,
-          child: Row(
-            children: [
-              // Veg / Non-veg badge
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  border: Border.all(
+        child: Row(
+          children: [
+            // Veg / Non-veg badge
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: widget.item.isVegetarian
+                      ? AppColors.vegGreen
+                      : AppColors.nonVegRed,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Center(
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
                     color: widget.item.isVegetarian
                         ? AppColors.vegGreen
                         : AppColors.nonVegRed,
-                    width: 1.5,
-                  ),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Center(
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: widget.item.isVegetarian
-                          ? AppColors.vegGreen
-                          : AppColors.nonVegRed,
-                      shape: BoxShape.circle,
-                    ),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ),
-              const SizedBox(width: AppSizes.s12),
-              // Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.item.name,
-                      style: AppTypography.titleSmall,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppSizes.s4),
-                    Text(
-                      '\u20B9${widget.item.price.toInt()}',
-                      style: AppTypography.priceSmall,
-                    ),
-                  ],
-                ),
-              ),
-              // Availability toggle
-              Column(
+            ),
+            const SizedBox(width: AppSizes.s12),
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Switch.adaptive(
-                    value: _isAvailable,
-                    activeTrackColor: AppColors.success,
-                    onChanged: (value) async {
-                      setState(() => _isAvailable = value);
-                      final restaurantId = ref.read(myRestaurantIdProvider);
-                      if (restaurantId == null) return;
-                      try {
-                        await updateMenuItemAvailability(
-                          ref,
-                          restaurantId: restaurantId,
-                          itemId: widget.item.id,
-                          isAvailable: value,
-                        );
-                      } catch (_) {
-                        if (mounted) setState(() => _isAvailable = !value);
-                      }
-                    },
-                  ),
                   Text(
-                    _isAvailable ? 'Available' : 'Unavailable',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: _isAvailable
-                          ? AppColors.success
-                          : AppColors.textHint,
+                    widget.item.name,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSizes.s4),
+                  Text(
+                    '\u20B9${widget.item.price.toInt()}',
+                    style: AppTypography.priceSmall.copyWith(
+                      color: Colors.white70,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            // Availability toggle
+            Column(
+              children: [
+                Switch.adaptive(
+                  value: _isAvailable,
+                  activeTrackColor: AppColors.success,
+                  onChanged: (value) async {
+                    setState(() => _isAvailable = value);
+                    final restaurantId = ref.read(myRestaurantIdProvider);
+                    if (restaurantId == null) return;
+                    try {
+                      await updateMenuItemAvailability(
+                        ref,
+                        restaurantId: restaurantId,
+                        itemId: widget.item.id,
+                        isAvailable: value,
+                      );
+                    } catch (_) {
+                      if (mounted) setState(() => _isAvailable = !value);
+                    }
+                  },
+                ),
+                Text(
+                  _isAvailable ? 'Available' : 'Unavailable',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: _isAvailable
+                        ? AppColors.success
+                        : AppColors.textHint,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

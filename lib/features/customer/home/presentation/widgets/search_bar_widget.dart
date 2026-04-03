@@ -14,28 +14,41 @@ class SearchBarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => context.push(RoutePaths.searchScreen),
       child: Container(
         height: AppSizes.buttonHeight,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.s16),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: isDark ? AppColors.darkCard : AppColors.surface,
           borderRadius: AppSizes.borderRadiusM,
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(
+            color: isDark ? AppColors.darkDivider : AppColors.divider,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.search_rounded,
-              color: AppColors.textHint,
+              color: isDark
+                  ? AppColors.glassTextSecondary
+                  : AppColors.textSecondary,
               size: AppSizes.iconM,
             ),
             const SizedBox(width: AppSizes.s12),
             Text(
               AppStrings.searchRestaurants,
               style: AppTypography.bodyLarge.copyWith(
-                color: AppColors.textHint,
+                color: isDark ? AppColors.glassTextHint : AppColors.textHint,
               ),
             ),
           ],

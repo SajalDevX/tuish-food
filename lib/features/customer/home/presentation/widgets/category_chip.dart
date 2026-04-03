@@ -36,6 +36,7 @@ class CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final icon = _categoryIcons[category.id] ?? Icons.restaurant_outlined;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: onTap,
@@ -50,17 +51,23 @@ class CategoryChip extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.15)
-                    : AppColors.background,
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : (isDark ? AppColors.darkCard : AppColors.surface),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.divider,
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isDark ? AppColors.darkDivider : AppColors.divider),
                   width: isSelected ? 2 : 1,
                 ),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark
+                          ? AppColors.glassTextSecondary
+                          : AppColors.textSecondary),
                 size: AppSizes.iconL,
               ),
             ),
@@ -68,7 +75,11 @@ class CategoryChip extends StatelessWidget {
             Text(
               category.name,
               style: AppTypography.labelSmall.copyWith(
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark
+                          ? AppColors.glassTextBody
+                          : AppColors.textSecondary),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
               textAlign: TextAlign.center,

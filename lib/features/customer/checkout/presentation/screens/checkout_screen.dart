@@ -6,7 +6,9 @@ import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/loading_overlay.dart';
+import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/customer/cart/presentation/providers/cart_provider.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_summary.dart';
@@ -229,13 +231,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     return LoadingOverlay(
       isLoading: checkoutState.isPlacingOrder,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(AppStrings.checkout),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
+      child: GlassScaffold(
+        appBar: TuishAppBar(
+          title: AppStrings.checkout,
         ),
         body: ListView(
           padding: const EdgeInsets.only(bottom: 120),
@@ -267,7 +265,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Payment Method', style: AppTypography.titleSmall),
+                  Text('Payment Method', style: AppTypography.titleSmall.copyWith(color: Colors.white)),
                   const SizedBox(height: AppSizes.s12),
                   PaymentMethodTile(
                     method: PaymentMethod.razorpay,
@@ -305,22 +303,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Padding(
               padding: AppSizes.paddingHorizontalM,
               child: TextField(
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Any special instructions?',
                   hintStyle: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textHint,
+                    color: Colors.white38,
                   ),
                   prefixIcon: const Icon(
                     Icons.edit_note,
-                    color: AppColors.textSecondary,
+                    color: Colors.white54,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: AppSizes.borderRadiusM,
-                    borderSide: const BorderSide(color: AppColors.divider),
+                    borderSide: const BorderSide(color: AppColors.darkGlassBorder),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: AppSizes.borderRadiusM,
-                    borderSide: const BorderSide(color: AppColors.divider),
+                    borderSide: const BorderSide(color: AppColors.darkGlassBorder),
                   ),
                 ),
                 maxLines: 2,

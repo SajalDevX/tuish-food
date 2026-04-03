@@ -68,6 +68,7 @@ class TuishButton extends StatelessWidget {
 
   Widget _buildLoadingIndicator(Color color) {
     return SizedBox(
+      key: const ValueKey('loading'),
       width: 20,
       height: 20,
       child: CircularProgressIndicator(
@@ -78,27 +79,30 @@ class TuishButton extends StatelessWidget {
   }
 
   Widget _buildChild(Color foregroundColor) {
-    if (isLoading) {
-      return _buildLoadingIndicator(foregroundColor);
-    }
-
     final textWidget = Text(
       label,
       style: AppTypography.labelLarge.copyWith(color: foregroundColor),
     );
 
-    if (icon != null) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          icon!,
-          const SizedBox(width: AppSizes.s8),
-          textWidget,
-        ],
-      );
-    }
-
-    return textWidget;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      child: isLoading
+          ? _buildLoadingIndicator(foregroundColor)
+          : (icon != null
+              ? Row(
+                  key: const ValueKey('content'),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    icon!,
+                    const SizedBox(width: AppSizes.s8),
+                    textWidget,
+                  ],
+                )
+              : KeyedSubtree(
+                  key: const ValueKey('content'),
+                  child: textWidget,
+                )),
+    );
   }
 
   @override
@@ -112,8 +116,10 @@ class TuishButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.onPrimary,
-            disabledBackgroundColor: AppColors.primaryLight.withValues(alpha: 0.5),
-            disabledForegroundColor: AppColors.onPrimary.withValues(alpha: 0.7),
+            disabledBackgroundColor:
+                AppColors.primaryLight.withValues(alpha: 0.5),
+            disabledForegroundColor:
+                AppColors.onPrimary.withValues(alpha: 0.7),
             minimumSize: Size(
               isFullWidth ? double.infinity : 0,
               AppSizes.buttonHeight,
@@ -195,7 +201,7 @@ class TuishButton extends StatelessWidget {
         );
     }
 
-    return button;
+    return _AnimatedPressScale(child: button);
   }
 }
 
@@ -243,4 +249,56 @@ class _TuishButtonText extends TuishButton {
     super.isFullWidth,
     super.key,
   }) : super._(variant: _TuishButtonVariant.text);
+}
+
+class _AnimatedPressScale extends StatefulWidget {
+  const _AnimatedPressScale({required this.child});
+  final Widget child;
+
+  @override
+  State<_AnimatedPressScale> createState() => _AnimatedPressScaleState();
+}
+
+class _AnimatedPressScaleState extends State<_AnimatedPressScale>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      reverseDuration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+        reverseCurve: Curves.easeOutBack,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder: (context, child) =>
+            Transform.scale(scale: _scale.value, child: child),
+        child: widget.child,
+      ),
+    );
+  }
 }

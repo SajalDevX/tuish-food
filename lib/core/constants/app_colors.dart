@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   // Primary
-  static const Color primary = Color(0xFFFF5722);
-  static const Color primaryLight = Color(0xFFFF8A65);
-  static const Color primaryDark = Color(0xFFE64A19);
+  static const Color primary = Color(0xFFE23744);
+  static const Color primaryLight = Color(0xFFFF6B74);
+  static const Color primaryDark = Color(0xFFB71C2A);
   static const Color onPrimary = Colors.white;
 
   // Secondary
-  static const Color secondary = Color(0xFF009688);
-  static const Color secondaryLight = Color(0xFF4DB6AC);
-  static const Color secondaryDark = Color(0xFF00796B);
+  static const Color secondary = Color(0xFF2F855A);
+  static const Color secondaryLight = Color(0xFF48BB78);
+  static const Color secondaryDark = Color(0xFF276749);
   static const Color onSecondary = Colors.white;
 
   // Surface & Background
   static const Color surface = Colors.white;
-  static const Color background = Color(0xFFF5F5F5);
-  static const Color scaffoldBackground = Color(0xFFFAFAFA);
+  static const Color background = Color(0xFFF8F8F8);
+  static const Color scaffoldBackground = Color(0xFFF5F5F5);
   static const Color cardBackground = Colors.white;
 
   // Text
-  static const Color textPrimary = Color(0xFF212121);
-  static const Color textSecondary = Color(0xFF757575);
-  static const Color textHint = Color(0xFFBDBDBD);
+  static const Color textPrimary = Color(0xFF1C1C1C);
+  static const Color textSecondary = Color(0xFF666666);
+  static const Color textHint = Color(0xFF9E9E9E);
   static const Color textOnDark = Colors.white;
 
   // Status
@@ -42,31 +42,34 @@ abstract final class AppColors {
   static const Color statusCancelled = Color(0xFFEF5350);
 
   // Misc
-  static const Color divider = Color(0xFFE0E0E0);
-  static const Color shimmerBase = Color(0xFFE0E0E0);
-  static const Color shimmerHighlight = Color(0xFFF5F5F5);
+  static const Color divider = Color(0xFFE8E8E8);
+  static const Color shimmerBase = Color(0xFFEAEAEA);
+  static const Color shimmerHighlight = Color(0xFFF7F7F7);
   static const Color starFilled = Color(0xFFFFC107);
   static const Color starEmpty = Color(0xFFE0E0E0);
   static const Color vegGreen = Color(0xFF4CAF50);
   static const Color nonVegRed = Color(0xFFD32F2F);
 
   // Dark Theme
-  static const Color darkSurface = Color(0xFF1E1E1E);
-  static const Color darkBackground = Color(0xFF121212);
-  static const Color darkCard = Color(0xFF2C2C2C);
-  static const Color darkDivider = Color(0xFF424242);
+  static const Color darkSurface = Color(0xFF1F1F1F);
+  static const Color darkBackground = Color(0xFF111111);
+  static const Color darkCard = Color(0xFF1A1A1A);
+  static const Color darkDivider = Color(0xFF2B2B2B);
+  static const Color darkScaffold = Color(0xFF101010);
+  static const Color darkSurfaceDim = Color(0xFF161616);
 
-  // ─── Glass Theme Colors ──────────────────────────────────────────────────
-  // Dark mode glass
-  static const Color darkGlassFill = Color(0x1AFFFFFF);       // white @ 10%
-  static const Color darkGlassBorder = Color(0x26FFFFFF);      // white @ 15%
-  static const Color darkGlassStroke = Color(0x33FFFFFF);      // white @ 20%
-  static const Color darkScaffold = Color(0xFF0D1117);
-  static const Color darkSurfaceDim = Color(0xFF161B22);
+  // Flat theme compatibility tokens
+  static const Color lightGlassFill = surface;
+  static const Color lightGlassBorder = divider;
+  static const Color lightGlassStroke = divider;
+  static const Color lightScaffold = scaffoldBackground;
 
-  // Light mode glass
-  static const Color lightGlassFill = Color(0xB3FFFFFF);       // white @ 70%
-  static const Color lightGlassBorder = Color(0x4DFFFFFF);     // white @ 30%
-  static const Color lightGlassStroke = Color(0x66FFFFFF);     // white @ 40%
-  static const Color lightScaffold = Color(0xFFF0F2F5);
+  static const Color darkGlassFill = darkCard;
+  static const Color darkGlassBorder = darkDivider;
+  static const Color darkGlassStroke = darkDivider;
+
+  static const Color glassTextPrimary = Colors.white;
+  static const Color glassTextBody = Color(0xFFEAEAEA);
+  static const Color glassTextSecondary = Color(0xFFB8B8B8);
+  static const Color glassTextHint = Color(0xFF8C8C8C);
 }

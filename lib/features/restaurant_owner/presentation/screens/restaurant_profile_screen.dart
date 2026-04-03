@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
@@ -41,10 +42,16 @@ class RestaurantProfileScreen extends ConsumerWidget {
         ? restaurant.cuisineTypes.join(', ')
         : 'Set up your restaurant to get started';
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: const TuishAppBar(title: 'My Restaurant'),
       body: ListView(
-        padding: AppSizes.paddingAllL,
+        padding: EdgeInsets.only(
+          left: AppSizes.s24,
+          right: AppSizes.s24,
+          bottom: AppSizes.s24,
+          // Account for glass AppBar overlapping the body
+          top: MediaQuery.of(context).padding.top + kToolbarHeight + AppSizes.s16,
+        ),
         children: [
           // Restaurant header
           Container(
