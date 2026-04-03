@@ -38,13 +38,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _onSearchChanged(String query) {
+    setState(() {});
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(
-      const Duration(milliseconds: 500),
-      () {
-        ref.read(searchQueryProvider.notifier).update(query);
-      },
-    );
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      ref.read(searchQueryProvider.notifier).update(query);
+    });
   }
 
   @override
@@ -79,7 +77,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
         actions: [
-          if (_searchController.text.isNotEmpty)
+          if (currentQuery.isNotEmpty || _searchController.text.isNotEmpty)
             IconButton(
               icon: const Icon(
                 Icons.clear_rounded,
@@ -87,6 +85,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               onPressed: () {
                 _searchController.clear();
+                setState(() {});
                 ref.read(searchQueryProvider.notifier).update('');
               },
             ),
@@ -96,10 +95,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildBody(
-    AsyncValue searchResults,
-    String currentQuery,
-  ) {
+  Widget _buildBody(AsyncValue searchResults, String currentQuery) {
     if (currentQuery.trim().isEmpty) {
       return _buildInitialState();
     }
@@ -127,9 +123,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         );
       },
       loading: () => const Center(
-        child: CircularProgressIndicator(
-          color: AppColors.primary,
-        ),
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (error, _) => EmptyStateWidget(
         message: AppStrings.somethingWentWrong,

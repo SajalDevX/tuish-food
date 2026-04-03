@@ -6,6 +6,7 @@ import 'package:tuish_food/core/enums/user_role.dart';
 import 'package:tuish_food/features/customer/cart/presentation/screens/cart_screen.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/address_selection_screen.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/checkout_screen.dart';
+import 'package:tuish_food/features/customer/checkout/domain/entities/checkout_order_draft.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/order_confirmation_screen.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/payment_method_screen.dart';
 import 'package:tuish_food/features/customer/home/presentation/screens/customer_home_screen.dart';
@@ -13,6 +14,7 @@ import 'package:tuish_food/features/customer/home/presentation/screens/restauran
 import 'package:tuish_food/features/customer/home/presentation/screens/search_screen.dart';
 import 'package:tuish_food/features/customer/orders/presentation/screens/order_detail_screen.dart';
 import 'package:tuish_food/features/customer/orders/presentation/screens/orders_list_screen.dart';
+import 'package:tuish_food/features/customer/menu/presentation/screens/menu_item_detail_screen.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/add_address_screen.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/addresses_screen.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/edit_profile_screen.dart';
@@ -79,15 +81,32 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Global redirect
     // -------------------------------------------------------------------
     redirect: (context, state) {
+      if (authState.isLoading) {
+        return state.uri.toString() == RoutePaths.splash
+            ? null
+            : RoutePaths.splash;
+      }
+
       final isLoggedIn = authState.value != null;
       final currentPath = state.uri.toString();
       final isRoleSelectionRoute = currentPath == RoutePaths.roleSelection;
-      final isAuthRoute = currentPath.startsWith(RoutePaths.auth) ||
+      final isAuthRoute =
+          currentPath.startsWith(RoutePaths.auth) ||
           currentPath == RoutePaths.splash;
       final role = roleAsync.value;
 
       if (isLoggedIn && roleAsync.isLoading) {
-        return null;
+        return currentPath == RoutePaths.splash ? null : RoutePaths.splash;
+      }
+
+      if (currentPath == RoutePaths.splash) {
+        if (!isLoggedIn) {
+          return RoutePaths.login;
+        }
+        if (role == null) {
+          return RoutePaths.roleSelection;
+        }
+        return _homePathForRole(role);
       }
 
       // 1. Not logged in and not on an auth page -> redirect to login
@@ -145,7 +164,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.login,
         name: RouteNames.login,
-        pageBuilder: (context, state) => _fadeThrough(state, const LoginScreen()),
+        pageBuilder: (context, state) =>
+            _fadeThrough(state, const LoginScreen()),
       ),
       GoRoute(
         path: RoutePaths.register,
@@ -176,7 +196,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.checkout,
         name: RouteNames.checkout,
-        pageBuilder: (context, state) => _slideUp(state, const CheckoutScreen()),
+        pageBuilder: (context, state) => _slideUp(
+          state,
+          CheckoutScreen(
+            orderDraft: state.extra is CheckoutOrderDraft
+                ? state.extra as CheckoutOrderDraft
+                : null,
+          ),
+        ),
         routes: [
           GoRoute(
             path: 'address',
@@ -211,22 +238,35 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.customerHome,
                 name: RouteNames.customerHome,
-                builder: (context, state) =>
-                    const CustomerHomeScreen(),
+                builder: (context, state) => const CustomerHomeScreen(),
                 routes: [
                   GoRoute(
                     path: 'restaurant/:id',
                     name: RouteNames.restaurantDetail,
                     pageBuilder: (context, state) {
                       final id = state.pathParameters['id']!;
-                      return _slideUp(state, RestaurantDetailScreen(restaurantId: id));
+                      return _slideUp(
+                        state,
+                        RestaurantDetailScreen(restaurantId: id),
+                      );
                     },
                   ),
                   GoRoute(
                     path: 'search',
                     name: RouteNames.search,
-                    builder: (context, state) =>
-                        const SearchScreen(),
+                    builder: (context, state) => const SearchScreen(),
+                  ),
+                  GoRoute(
+                    path: 'item/:itemId',
+                    name: RouteNames.restaurantMenuItem,
+                    builder: (context, state) {
+                      final restaurantId = state.pathParameters['id']!;
+                      final itemId = state.pathParameters['itemId']!;
+                      return MenuItemDetailScreen(
+                        restaurantId: restaurantId,
+                        itemId: itemId,
+                      );
+                    },
                   ),
                 ],
               ),
@@ -239,8 +279,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.customerOrders,
                 name: RouteNames.customerOrders,
-                builder: (context, state) =>
-                    const OrdersListScreen(),
+                builder: (context, state) => const OrdersListScreen(),
                 routes: [
                   GoRoute(
                     path: ':orderId',
@@ -300,40 +339,34 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.customerProfile,
                 name: RouteNames.customerProfile,
-                builder: (context, state) =>
-                    const ProfileScreen(),
+                builder: (context, state) => const ProfileScreen(),
                 routes: [
                   GoRoute(
                     path: 'edit',
                     name: RouteNames.editProfile,
-                    builder: (context, state) =>
-                        const EditProfileScreen(),
+                    builder: (context, state) => const EditProfileScreen(),
                   ),
                   GoRoute(
                     path: 'addresses',
                     name: RouteNames.addresses,
-                    builder: (context, state) =>
-                        const AddressesScreen(),
+                    builder: (context, state) => const AddressesScreen(),
                     routes: [
                       GoRoute(
                         path: 'add',
                         name: RouteNames.addAddress,
-                        builder: (context, state) =>
-                            const AddAddressScreen(),
+                        builder: (context, state) => const AddAddressScreen(),
                       ),
                     ],
                   ),
                   GoRoute(
                     path: 'settings',
                     name: RouteNames.customerSettings,
-                    builder: (context, state) =>
-                        const SettingsScreen(),
+                    builder: (context, state) => const SettingsScreen(),
                   ),
                   GoRoute(
                     path: 'notifications',
                     name: RouteNames.customerNotifications,
-                    builder: (context, state) =>
-                        const NotificationsScreen(),
+                    builder: (context, state) => const NotificationsScreen(),
                   ),
                 ],
               ),
@@ -354,8 +387,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.deliveryHome,
                 name: RouteNames.deliveryHome,
-                builder: (context, state) =>
-                    const DeliveryHomeScreen(),
+                builder: (context, state) => const DeliveryHomeScreen(),
               ),
             ],
           ),
@@ -366,8 +398,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.deliveryOrders,
                 name: RouteNames.deliveryOrders,
-                builder: (context, state) =>
-                    const AvailableOrdersScreen(),
+                builder: (context, state) => const AvailableOrdersScreen(),
                 routes: [
                   GoRoute(
                     path: ':orderId',
@@ -410,8 +441,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.deliveryEarnings,
                 name: RouteNames.deliveryEarnings,
-                builder: (context, state) =>
-                    const EarningsScreen(),
+                builder: (context, state) => const EarningsScreen(),
               ),
             ],
           ),
@@ -422,8 +452,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.deliveryProfile,
                 name: RouteNames.deliveryProfile,
-                builder: (context, state) =>
-                    const DeliveryProfileScreen(),
+                builder: (context, state) => const DeliveryProfileScreen(),
               ),
             ],
           ),
@@ -434,7 +463,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.restaurantSetup,
         name: RouteNames.restaurantSetup,
-        pageBuilder: (context, state) => _slideUp(state, const RestaurantSetupScreen()),
+        pageBuilder: (context, state) =>
+            _slideUp(state, const RestaurantSetupScreen()),
       ),
 
       // ---- Restaurant owner shell (bottom nav) ----
@@ -449,8 +479,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.restaurantDashboard,
                 name: RouteNames.restaurantDashboard,
-                builder: (context, state) =>
-                    const RestaurantDashboardScreen(),
+                builder: (context, state) => const RestaurantDashboardScreen(),
               ),
             ],
           ),
@@ -461,14 +490,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.restaurantOwnerMenu,
                 name: RouteNames.restaurantOwnerMenu,
-                builder: (context, state) =>
-                    const OwnerMenuScreen(),
+                builder: (context, state) => const OwnerMenuScreen(),
                 routes: [
                   GoRoute(
                     path: 'add',
                     name: RouteNames.restaurantAddMenuItem,
-                    builder: (context, state) =>
-                        const AddMenuItemScreen(),
+                    builder: (context, state) => const AddMenuItemScreen(),
                   ),
                   GoRoute(
                     path: ':itemId/edit',
@@ -489,8 +516,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.restaurantOrders,
                 name: RouteNames.restaurantOrders,
-                builder: (context, state) =>
-                    const OwnerOrdersScreen(),
+                builder: (context, state) => const OwnerOrdersScreen(),
                 routes: [
                   GoRoute(
                     path: ':orderId',
@@ -511,8 +537,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.restaurantProfile,
                 name: RouteNames.restaurantProfile,
-                builder: (context, state) =>
-                    const RestaurantProfileScreen(),
+                builder: (context, state) => const RestaurantProfileScreen(),
               ),
             ],
           ),
@@ -528,20 +553,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.adminDashboard,
             name: RouteNames.adminDashboard,
-            builder: (context, state) =>
-                const AdminDashboardScreen(),
+            builder: (context, state) => const AdminDashboardScreen(),
           ),
           GoRoute(
             path: RoutePaths.adminRestaurants,
             name: RouteNames.adminRestaurants,
-            builder: (context, state) =>
-                const RestaurantsListScreen(),
+            builder: (context, state) => const RestaurantsListScreen(),
             routes: [
               GoRoute(
                 path: 'add',
                 name: RouteNames.addRestaurant,
-                builder: (context, state) =>
-                    const AddRestaurantScreen(),
+                builder: (context, state) => const AddRestaurantScreen(),
               ),
               GoRoute(
                 path: ':id/edit',
@@ -566,8 +588,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.adminUsers,
             name: RouteNames.adminUsers,
-            builder: (context, state) =>
-                const UsersListScreen(),
+            builder: (context, state) => const UsersListScreen(),
             routes: [
               GoRoute(
                 path: ':id',
@@ -583,14 +604,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.adminDeliveryPartners,
             name: RouteNames.adminDeliveryPartners,
-            builder: (context, state) =>
-                const DeliveryPartnersScreen(),
+            builder: (context, state) => const DeliveryPartnersScreen(),
           ),
           GoRoute(
             path: RoutePaths.adminOrders,
             name: RouteNames.adminOrders,
-            builder: (context, state) =>
-                const AllOrdersScreen(),
+            builder: (context, state) => const AllOrdersScreen(),
             routes: [
               GoRoute(
                 path: ':orderId',
@@ -606,22 +625,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: RoutePaths.adminPromotions,
             name: RouteNames.adminPromotions,
-            builder: (context, state) =>
-                const PromotionsScreen(),
+            builder: (context, state) => const PromotionsScreen(),
             routes: [
               GoRoute(
                 path: 'create',
                 name: RouteNames.createPromotion,
-                builder: (context, state) =>
-                    const CreatePromotionScreen(),
+                builder: (context, state) => const CreatePromotionScreen(),
               ),
             ],
           ),
           GoRoute(
             path: RoutePaths.adminSettings,
             name: RouteNames.adminSettings,
-            builder: (context, state) =>
-                const AdminSettingsScreen(),
+            builder: (context, state) => const AdminSettingsScreen(),
           ),
         ],
       ),
@@ -666,8 +682,10 @@ CustomTransitionPage<void> _slideUp(GoRouterState state, Widget child) {
     child: child,
     transitionDuration: const Duration(milliseconds: 350),
     transitionsBuilder: (_, animation, _, child) {
-      final tween = Tween(begin: const Offset(0, 0.15), end: Offset.zero)
-          .chain(CurveTween(curve: Curves.easeOutCubic));
+      final tween = Tween(
+        begin: const Offset(0, 0.15),
+        end: Offset.zero,
+      ).chain(CurveTween(curve: Curves.easeOutCubic));
       return SlideTransition(
         position: animation.drive(tween),
         child: FadeTransition(opacity: animation, child: child),

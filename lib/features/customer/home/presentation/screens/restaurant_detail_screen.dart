@@ -12,29 +12,45 @@ import 'package:tuish_food/core/widgets/rating_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/customer/home/domain/entities/restaurant.dart';
 import 'package:tuish_food/features/customer/home/presentation/providers/home_provider.dart';
+import 'package:tuish_food/features/customer/menu/domain/entities/menu_category.dart';
+import 'package:tuish_food/features/customer/menu/domain/entities/menu_item.dart';
+import 'package:tuish_food/features/customer/menu/presentation/providers/menu_provider.dart';
+import 'package:tuish_food/features/customer/menu/presentation/widgets/menu_item_card.dart';
+import 'package:tuish_food/routing/route_names.dart';
 
 class RestaurantDetailScreen extends ConsumerWidget {
-  const RestaurantDetailScreen({
-    super.key,
-    required this.restaurantId,
-  });
+  const RestaurantDetailScreen({super.key, required this.restaurantId});
 
   final String restaurantId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final restaurantAsync = ref.watch(restaurantDetailProvider(restaurantId));
+    final categoriesAsync = ref.watch(menuCategoriesProvider(restaurantId));
+    final menuItemsAsync = ref.watch(menuItemsProvider(restaurantId));
 
     return GlassScaffold(
       body: restaurantAsync.when(
-        data: (restaurant) => _buildContent(context, restaurant),
+        data: (restaurant) => _buildContent(
+          context,
+          ref,
+          restaurant,
+          categoriesAsync,
+          menuItemsAsync,
+        ),
         loading: () => _buildLoadingState(),
         error: (error, _) => _buildErrorState(context, ref, error),
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, Restaurant restaurant) {
+  Widget _buildContent(
+    BuildContext context,
+    WidgetRef ref,
+    Restaurant restaurant,
+    AsyncValue<List<MenuCategory>> categoriesAsync,
+    AsyncValue<List<MenuItem>> menuItemsAsync,
+  ) {
     return CustomScrollView(
       slivers: [
         // ---- Cover Image with Back Button Overlay ----
@@ -45,7 +61,9 @@ class RestaurantDetailScreen extends ConsumerWidget {
           leading: Padding(
             padding: const EdgeInsets.all(AppSizes.s8),
             child: CircleAvatar(
-              backgroundColor: Theme.of(context).cardColor.withValues(alpha: 0.9),
+              backgroundColor: Theme.of(
+                context,
+              ).cardColor.withValues(alpha: 0.9),
               child: IconButton(
                 icon: const Icon(
                   Icons.arrow_back_ios_new_rounded,
@@ -74,10 +92,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black54,
-                        ],
+                        colors: [Colors.transparent, Colors.black54],
                       ),
                     ),
                   ),
@@ -89,8 +104,9 @@ class RestaurantDetailScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(right: AppSizes.s8),
               child: CircleAvatar(
-                backgroundColor:
-                    Theme.of(context).cardColor.withValues(alpha: 0.9),
+                backgroundColor: Theme.of(
+                  context,
+                ).cardColor.withValues(alpha: 0.9),
                 child: IconButton(
                   icon: const Icon(
                     Icons.share_outlined,
@@ -240,9 +256,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
           ),
         ),
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: AppSizes.s8),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s8)),
 
         // ---- Description ----
         if (restaurant.description.isNotEmpty)
@@ -266,9 +280,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
             ),
           ),
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: AppSizes.s8),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s8)),
 
         // ---- Operating Hours ----
         if (restaurant.operatingHours.isNotEmpty)
@@ -287,10 +299,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            hours.day,
-                            style: AppTypography.bodyMedium,
-                          ),
+                          Text(hours.day, style: AppTypography.bodyMedium),
                           Text(
                             hours.isClosed
                                 ? 'Closed'
@@ -310,9 +319,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
             ),
           ),
 
-        const SliverToBoxAdapter(
-          child: SizedBox(height: AppSizes.s8),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s8)),
 
         // ---- Reviews Preview ----
         SliverToBoxAdapter(
@@ -367,9 +374,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
         ),
 
         // ---- Address ----
-        const SliverToBoxAdapter(
-          child: SizedBox(height: AppSizes.s8),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s8)),
 
         SliverToBoxAdapter(
           child: Container(
@@ -403,12 +408,194 @@ class RestaurantDetailScreen extends ConsumerWidget {
           ),
         ),
 
-        // Bottom spacing for the button
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 100),
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s8)),
+
+        ..._buildMenuSlivers(
+          context,
+          ref,
+          restaurant,
+          categoriesAsync,
+          menuItemsAsync,
         ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: AppSizes.s32)),
       ],
     );
+  }
+
+  List<Widget> _buildMenuSlivers(
+    BuildContext context,
+    WidgetRef ref,
+    Restaurant restaurant,
+    AsyncValue<List<MenuCategory>> categoriesAsync,
+    AsyncValue<List<MenuItem>> menuItemsAsync,
+  ) {
+    return [
+      SliverToBoxAdapter(
+        child: Container(
+          color: Theme.of(context).cardColor,
+          padding: AppSizes.paddingAllM,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Menu', style: AppTypography.titleLarge),
+              const SizedBox(height: AppSizes.s4),
+              Text(
+                'Browse the full food list and tap an item to order',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      categoriesAsync.when(
+        data: (categories) => menuItemsAsync.when(
+          data: (items) {
+            final categoryMap = {
+              for (final category in categories) category.id: category,
+            };
+            final groupedItems = <MenuCategory?, List<MenuItem>>{};
+
+            for (final item in items) {
+              final category = categoryMap[item.categoryId];
+              groupedItems.putIfAbsent(category, () => []).add(item);
+            }
+
+            if (groupedItems.isEmpty) {
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: AppSizes.paddingAllM,
+                  child: const Text(
+                    'No menu items available right now',
+                    style: AppTypography.bodyMedium,
+                  ),
+                ),
+              );
+            }
+
+            return SliverList(
+              delegate: SliverChildListDelegate.fixed([
+                for (final entry in groupedItems.entries) ...[
+                  Container(
+                    color: Theme.of(context).cardColor,
+                    padding: AppSizes.paddingAllM,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.key?.name ?? 'More items',
+                          style: AppTypography.titleMedium,
+                        ),
+                        if ((entry.key?.description ?? '').isNotEmpty) ...[
+                          const SizedBox(height: AppSizes.s4),
+                          Text(
+                            entry.key!.description,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  for (final item in entry.value)
+                    Container(
+                      color: Theme.of(context).cardColor,
+                      child: MenuItemCard(
+                        item: item,
+                        actionLabel: 'ORDER',
+                        onTap: () => context.pushNamed(
+                          RouteNames.restaurantMenuItem,
+                          pathParameters: {
+                            'id': restaurant.id,
+                            'itemId': item.id,
+                          },
+                        ),
+                        onAddToCart: () => context.pushNamed(
+                          RouteNames.restaurantMenuItem,
+                          pathParameters: {
+                            'id': restaurant.id,
+                            'itemId': item.id,
+                          },
+                        ),
+                      ),
+                    ),
+                  const Divider(height: 1),
+                ],
+              ]),
+            );
+          },
+          loading: () => const SliverToBoxAdapter(
+            child: Padding(
+              padding: AppSizes.paddingAllM,
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
+          ),
+          error: (error, _) => SliverToBoxAdapter(
+            child: Padding(
+              padding: AppSizes.paddingAllM,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Failed to load menu',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.error,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.s8),
+                  TuishButton.outlined(
+                    label: AppStrings.retry,
+                    isFullWidth: false,
+                    onPressed: () {
+                      ref.invalidate(menuCategoriesProvider(restaurantId));
+                      ref.invalidate(menuItemsProvider(restaurantId));
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        loading: () => const SliverToBoxAdapter(
+          child: Padding(
+            padding: AppSizes.paddingAllM,
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          ),
+        ),
+        error: (error, _) => SliverToBoxAdapter(
+          child: Padding(
+            padding: AppSizes.paddingAllM,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Failed to load menu categories',
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.error,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.s8),
+                TuishButton.outlined(
+                  label: AppStrings.retry,
+                  isFullWidth: false,
+                  onPressed: () {
+                    ref.invalidate(menuCategoriesProvider(restaurantId));
+                    ref.invalidate(menuItemsProvider(restaurantId));
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _buildInfoChip({required IconData icon, required String label}) {
@@ -489,11 +676,7 @@ class RestaurantDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(
-    BuildContext context,
-    WidgetRef ref,
-    Object error,
-  ) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
     return Center(
       child: Padding(
         padding: AppSizes.paddingAllL,

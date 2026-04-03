@@ -86,38 +86,28 @@ class RestaurantRemoteDatasourceImpl implements RestaurantRemoteDatasource {
     try {
       if (query.trim().isEmpty) return [];
 
-      // Firestore prefix search: name >= query && name < query + high Unicode char
       final searchTerm = query.trim().toLowerCase();
-      final endTerm = '$searchTerm\uf8ff';
-
       final snapshot = await _restaurantsRef
           .where('isActive', isEqualTo: true)
-          .orderBy('name')
-          .startAt([searchTerm])
-          .endAt([endTerm])
-          .limit(20)
+          .orderBy('averageRating', descending: true)
+          .limit(50)
           .get();
 
-      // Also search by tags/cuisineTypes for broader results
-      final tagSnapshot = await _restaurantsRef
-          .where('isActive', isEqualTo: true)
-          .where('tags', arrayContains: searchTerm)
-          .limit(10)
-          .get();
+      return snapshot.docs
+          .map((doc) => RestaurantModel.fromFirestore(doc))
+          .where((restaurant) {
+            final name = restaurant.name.toLowerCase();
+            final cuisines = restaurant.cuisineTypes.map(
+              (item) => item.toLowerCase(),
+            );
+            final tags = restaurant.tags.map((item) => item.toLowerCase());
 
-      final resultsMap = <String, RestaurantModel>{};
-
-      for (final doc in snapshot.docs) {
-        final model = RestaurantModel.fromFirestore(doc);
-        resultsMap[model.id] = model;
-      }
-
-      for (final doc in tagSnapshot.docs) {
-        final model = RestaurantModel.fromFirestore(doc);
-        resultsMap.putIfAbsent(model.id, () => model);
-      }
-
-      return resultsMap.values.toList();
+            return name.contains(searchTerm) ||
+                cuisines.any((item) => item.contains(searchTerm)) ||
+                tags.any((item) => item.contains(searchTerm));
+          })
+          .take(20)
+          .toList();
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to search restaurants');
     } catch (e) {

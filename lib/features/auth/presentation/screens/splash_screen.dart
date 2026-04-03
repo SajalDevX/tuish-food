@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:tuish_food/core/constants/app_colors.dart';
-import 'package:tuish_food/routing/route_paths.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
-import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
-import 'package:tuish_food/features/auth/presentation/providers/auth_state.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -35,46 +30,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeIn,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.elasticOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
 
     _animationController.forward();
-
-    _checkAuthAndNavigate();
-  }
-
-  Future<void> _checkAuthAndNavigate() async {
-    // Wait for the splash animation
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-    await authNotifier.checkAuthStatus();
-
-    if (!mounted) return;
-
-    final state = ref.read(authNotifierProvider);
-
-    if (state is Authenticated) {
-      if (context.mounted) {
-        context.go(RoutePaths.roleSelection);
-      }
-    } else {
-      if (context.mounted) {
-        context.go(RoutePaths.login);
-      }
-    }
   }
 
   @override
@@ -93,10 +56,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           builder: (context, child) {
             return FadeTransition(
               opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: child,
-              ),
+              child: ScaleTransition(scale: _scaleAnimation, child: child),
             );
           },
           child: Column(
@@ -126,16 +86,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               Text(
                 AppStrings.appName,
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSizes.s8),
               Text(
                 AppStrings.appTagline,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
+                  color: Colors.white.withValues(alpha: 0.9),
+                ),
               ),
             ],
           ),

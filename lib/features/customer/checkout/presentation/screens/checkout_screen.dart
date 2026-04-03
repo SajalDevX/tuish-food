@@ -6,11 +6,13 @@ import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/empty_state_widget.dart';
 import 'package:tuish_food/core/widgets/glass_scaffold.dart';
 import 'package:tuish_food/core/widgets/loading_overlay.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/customer/cart/presentation/providers/cart_provider.dart';
+import 'package:tuish_food/features/customer/checkout/domain/entities/checkout_order_draft.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_summary.dart';
 import 'package:tuish_food/features/customer/checkout/domain/entities/payment.dart';
 import 'package:tuish_food/features/customer/checkout/domain/repositories/checkout_repository.dart';
@@ -22,7 +24,9 @@ import 'package:tuish_food/features/customer/checkout/presentation/widgets/tip_s
 import 'package:tuish_food/routing/route_names.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
-  const CheckoutScreen({super.key});
+  const CheckoutScreen({super.key, this.orderDraft});
+
+  final CheckoutOrderDraft? orderDraft;
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -68,13 +72,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       'restaurantId': params.restaurantId,
       'restaurantName': params.restaurantName,
       'items': params.items
-          .map((i) => {
-                'id': i.menuItemId,
-                'name': i.name,
-                'price': i.price,
-                'quantity': i.quantity,
-                'totalPrice': i.price * i.quantity,
-              })
+          .map(
+            (i) => {
+              'id': i.menuItemId,
+              'name': i.name,
+              'price': i.price,
+              'quantity': i.quantity,
+              'totalPrice': i.price * i.quantity,
+            },
+          )
           .toList(),
       'deliveryAddressId': params.deliveryAddressId,
       'deliveryAddress': params.deliveryAddress,
@@ -98,7 +104,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
 
     if (orderId != null && mounted) {
-      ref.read(cartNotifierProvider.notifier).clear();
+      if (widget.orderDraft == null) {
+        ref.read(cartNotifierProvider.notifier).clear();
+      }
       checkoutNotifier.reset();
       context.goNamed(
         RouteNames.orderConfirmation,
@@ -114,19 +122,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Redirecting to ${response.walletName}...'),
-      ),
+      SnackBar(content: Text('Redirecting to ${response.walletName}...')),
     );
   }
 
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
   }
 
@@ -134,32 +137,43 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final cart = ref.read(cartNotifierProvider);
     final checkoutState = ref.read(checkoutNotifierProvider);
     final checkoutNotifier = ref.read(checkoutNotifierProvider.notifier);
+    final orderItems = widget.orderDraft?.items ?? cart.items;
+    final restaurantId =
+        widget.orderDraft?.restaurantId ?? cart.restaurantId ?? '';
+    final restaurantName =
+        widget.orderDraft?.restaurantName ??
+        cart.restaurantName ??
+        'Restaurant';
+    final subtotal = widget.orderDraft?.subtotal ?? cart.subtotal;
 
     const deliveryFee = 40.0;
     const taxRate = 0.05;
-    final taxes = cart.subtotal * taxRate;
-    final total = cart.subtotal +
+    final taxes = subtotal * taxRate;
+    final total =
+        subtotal +
         deliveryFee +
         taxes +
         checkoutState.tip -
         checkoutState.discount;
 
     final params = PlaceOrderParams(
-      restaurantId: cart.restaurantId ?? '',
-      restaurantName: cart.restaurantName ?? 'Restaurant',
-      items: cart.items
-          .map((item) => OrderItemParam(
-                menuItemId: item.menuItemId,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                selectedCustomizations: item.selectedCustomizations,
-              ))
+      restaurantId: restaurantId,
+      restaurantName: restaurantName,
+      items: orderItems
+          .map(
+            (item) => OrderItemParam(
+              menuItemId: item.menuItemId,
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              selectedCustomizations: item.selectedCustomizations,
+            ),
+          )
           .toList(),
       deliveryAddressId: checkoutState.deliveryAddressId ?? '',
       deliveryAddress: checkoutState.deliveryAddress ?? '',
       paymentMethod: checkoutState.paymentMethod,
-      subtotal: cart.subtotal,
+      subtotal: subtotal,
       deliveryFee: deliveryFee,
       taxes: taxes,
       tip: checkoutState.tip,
@@ -173,7 +187,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // COD: place order directly
       final orderId = await checkoutNotifier.placeOrder(params);
       if (orderId != null && mounted) {
-        ref.read(cartNotifierProvider.notifier).clear();
+        if (widget.orderDraft == null) {
+          ref.read(cartNotifierProvider.notifier).clear();
+        }
         checkoutNotifier.reset();
         context.goNamed(
           RouteNames.orderConfirmation,
@@ -185,7 +201,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _pendingOrderParams = params;
       final razorpayOrderId = await checkoutNotifier.createRazorpayOrder(
         amount: total,
-        receipt: '${cart.restaurantId}_${DateTime.now().millisecondsSinceEpoch}',
+        receipt: '${restaurantId}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
       if (razorpayOrderId == null) return;
@@ -201,7 +217,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         'amount': (total * 100).toInt(), // amount in paise
         'currency': 'INR',
         'name': 'Tuish Food',
-        'description': 'Order from ${cart.restaurantName ?? "Restaurant"}',
+        'description': 'Order from $restaurantName',
         'order_id': razorpayOrderId,
         'prefill': {
           'email': '', // populated from user profile if available
@@ -219,22 +235,37 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final cart = ref.watch(cartNotifierProvider);
     final checkoutState = ref.watch(checkoutNotifierProvider);
     final checkoutNotifier = ref.read(checkoutNotifierProvider.notifier);
+    final orderItems = widget.orderDraft?.items ?? cart.items;
+    final restaurantName =
+        widget.orderDraft?.restaurantName ??
+        cart.restaurantName ??
+        'Restaurant';
+    final subtotal = widget.orderDraft?.subtotal ?? cart.subtotal;
 
     const deliveryFee = 40.0;
     const taxRate = 0.05;
-    final taxes = cart.subtotal * taxRate;
-    final total = cart.subtotal +
+    final taxes = subtotal * taxRate;
+    final total =
+        subtotal +
         deliveryFee +
         taxes +
         checkoutState.tip -
         checkoutState.discount;
 
+    if (orderItems.isEmpty) {
+      return const GlassScaffold(
+        appBar: TuishAppBar(title: AppStrings.checkout),
+        body: EmptyStateWidget(
+          message: 'No items selected for checkout',
+          icon: Icons.shopping_bag_outlined,
+        ),
+      );
+    }
+
     return LoadingOverlay(
       isLoading: checkoutState.isPlacingOrder,
       child: GlassScaffold(
-        appBar: TuishAppBar(
-          title: AppStrings.checkout,
-        ),
+        appBar: TuishAppBar(title: AppStrings.checkout),
         body: ListView(
           padding: const EdgeInsets.only(bottom: 120),
           children: [
@@ -242,8 +273,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Padding(
               padding: AppSizes.paddingAllM,
               child: OrderSummaryCard(
-                items: cart.items,
-                restaurantName: cart.restaurantName ?? 'Restaurant',
+                items: orderItems,
+                restaurantName: restaurantName,
               ),
             ),
 
@@ -265,7 +296,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Payment Method', style: AppTypography.titleSmall.copyWith(color: Colors.white)),
+                  Text(
+                    'Payment Method',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: AppSizes.s12),
                   PaymentMethodTile(
                     method: PaymentMethod.razorpay,
@@ -278,7 +314,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   const SizedBox(height: AppSizes.s8),
                   PaymentMethodTile(
                     method: PaymentMethod.cashOnDelivery,
-                    isSelected: checkoutState.paymentMethod ==
+                    isSelected:
+                        checkoutState.paymentMethod ==
                         PaymentMethod.cashOnDelivery,
                     onTap: () => checkoutNotifier.setPaymentMethod(
                       PaymentMethod.cashOnDelivery,
@@ -315,11 +352,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   border: OutlineInputBorder(
                     borderRadius: AppSizes.borderRadiusM,
-                    borderSide: const BorderSide(color: AppColors.darkGlassBorder),
+                    borderSide: const BorderSide(
+                      color: AppColors.darkGlassBorder,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: AppSizes.borderRadiusM,
-                    borderSide: const BorderSide(color: AppColors.darkGlassBorder),
+                    borderSide: const BorderSide(
+                      color: AppColors.darkGlassBorder,
+                    ),
                   ),
                 ),
                 maxLines: 2,

@@ -61,9 +61,6 @@ class _TuishCardState extends State<TuishCard>
   void _handleTapUp(TapUpDetails _) {
     if (widget.onTap != null) {
       _controller.reverse();
-      Future.delayed(const Duration(milliseconds: 50), () {
-        if (mounted) widget.onTap?.call();
-      });
     }
   }
 
@@ -88,7 +85,12 @@ class _TuishCardState extends State<TuishCard>
         elevation: widget.elevation ?? AppSizes.elevationCard,
         shadowColor: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
         child: InkWell(
-          onTap: widget.onTap,
+          onTap: widget.onTap == null
+              ? null
+              : () {
+                  _controller.reverse();
+                  widget.onTap?.call();
+                },
           onTapDown: widget.onTap != null ? _handleTapDown : null,
           onTapUp: widget.onTap != null ? _handleTapUp : null,
           onTapCancel: widget.onTap != null ? _handleTapCancel : null,

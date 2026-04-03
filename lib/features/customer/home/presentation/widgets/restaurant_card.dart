@@ -6,14 +6,43 @@ import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/cached_image.dart';
 import 'package:tuish_food/core/widgets/tuish_card.dart';
 import 'package:tuish_food/features/customer/home/domain/entities/restaurant.dart';
+import 'package:tuish_food/routing/route_names.dart';
 
 /// A card widget displaying a restaurant's image, name, cuisine types,
 /// rating, delivery time, and delivery fee. Tapping navigates to
 /// the restaurant detail screen.
-class RestaurantCard extends StatelessWidget {
+class RestaurantCard extends StatefulWidget {
   const RestaurantCard({super.key, required this.restaurant});
 
   final Restaurant restaurant;
+
+  @override
+  State<RestaurantCard> createState() => _RestaurantCardState();
+}
+
+class _RestaurantCardState extends State<RestaurantCard> {
+  bool _isNavigating = false;
+
+  Future<void> _openRestaurant() async {
+    if (_isNavigating) return;
+
+    setState(() {
+      _isNavigating = true;
+    });
+
+    try {
+      await context.pushNamed(
+        RouteNames.restaurantDetail,
+        pathParameters: {'id': widget.restaurant.id},
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isNavigating = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +51,7 @@ class RestaurantCard extends StatelessWidget {
     return TuishCard(
       margin: const EdgeInsets.only(bottom: AppSizes.s12),
       padding: EdgeInsets.zero,
-      onTap: () {
-        context.push('/customer/home/restaurant/${restaurant.id}');
-      },
+      onTap: _openRestaurant,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -32,9 +59,9 @@ class RestaurantCard extends StatelessWidget {
           Stack(
             children: [
               Hero(
-                tag: 'restaurant_image_${restaurant.id}',
+                tag: 'restaurant_image_${widget.restaurant.id}',
                 child: CachedImage(
-                  imageUrl: restaurant.imageUrl,
+                  imageUrl: widget.restaurant.imageUrl,
                   height: AppSizes.cardImageHeight,
                   width: double.infinity,
                   borderRadius: const BorderRadius.vertical(
@@ -65,7 +92,7 @@ class RestaurantCard extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSizes.s4),
                       Text(
-                        restaurant.deliveryTimeLabel,
+                        widget.restaurant.deliveryTimeLabel,
                         style: AppTypography.labelSmall.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -76,7 +103,7 @@ class RestaurantCard extends StatelessWidget {
                 ),
               ),
               // Closed overlay
-              if (!restaurant.isOpen)
+              if (!widget.restaurant.isOpen)
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
@@ -118,7 +145,7 @@ class RestaurantCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        restaurant.name,
+                        widget.restaurant.name,
                         style: AppTypography.titleMedium.copyWith(
                           color: isDark
                               ? AppColors.glassTextPrimary
@@ -148,7 +175,7 @@ class RestaurantCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            restaurant.averageRating.toStringAsFixed(1),
+                            widget.restaurant.averageRating.toStringAsFixed(1),
                             style: AppTypography.labelSmall.copyWith(
                               color: isDark
                                   ? AppColors.glassTextPrimary
@@ -165,7 +192,7 @@ class RestaurantCard extends StatelessWidget {
 
                 // Cuisine types
                 Text(
-                  restaurant.cuisineTypesLabel,
+                  widget.restaurant.cuisineTypesLabel,
                   style: AppTypography.bodySmall.copyWith(
                     color: isDark
                         ? AppColors.glassTextSecondary
@@ -186,9 +213,9 @@ class RestaurantCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSizes.s4),
                     Text(
-                      restaurant.deliveryFeeLabel,
+                      widget.restaurant.deliveryFeeLabel,
                       style: AppTypography.bodySmall.copyWith(
-                        color: restaurant.deliveryFee == 0
+                        color: widget.restaurant.deliveryFee == 0
                             ? AppColors.success
                             : (isDark
                                   ? AppColors.glassTextSecondary
@@ -197,7 +224,7 @@ class RestaurantCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSizes.s16),
                     Text(
-                      restaurant.priceLevelLabel,
+                      widget.restaurant.priceLevelLabel,
                       style: AppTypography.bodySmall.copyWith(
                         color: isDark
                             ? AppColors.glassTextSecondary

@@ -28,6 +28,20 @@ final menuItemsProvider = FutureProvider.family<List<MenuItem>, String>((
   );
 });
 
+final menuItemProvider =
+    FutureProvider.family<MenuItem, ({String restaurantId, String itemId})>((
+      ref,
+      params,
+    ) async {
+      final items = await ref.watch(
+        menuItemsProvider(params.restaurantId).future,
+      );
+      return items.firstWhere(
+        (item) => item.id == params.itemId,
+        orElse: () => throw Exception('Menu item not found'),
+      );
+    });
+
 final menuCategoriesProvider =
     FutureProvider.family<List<MenuCategory>, String>((
       ref,
@@ -52,5 +66,6 @@ class VegFilterNotifier extends Notifier<bool?> {
   }
 }
 
-final vegFilterProvider =
-    NotifierProvider<VegFilterNotifier, bool?>(VegFilterNotifier.new);
+final vegFilterProvider = NotifierProvider<VegFilterNotifier, bool?>(
+  VegFilterNotifier.new,
+);

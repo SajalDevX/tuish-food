@@ -15,6 +15,7 @@ class MenuItemCard extends StatelessWidget {
     this.quantity = 0,
     this.onIncrement,
     this.onDecrement,
+    this.actionLabel = 'ADD',
   });
 
   final MenuItem item;
@@ -23,6 +24,7 @@ class MenuItemCard extends StatelessWidget {
   final int quantity;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
+  final String actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -179,6 +181,7 @@ class MenuItemCard extends StatelessWidget {
                   _AddButton(
                     onTap: onAddToCart,
                     hasCustomizations: item.hasCustomizations,
+                    label: actionLabel,
                   ),
               ],
             ),
@@ -220,9 +223,14 @@ class _VegIndicator extends StatelessWidget {
 }
 
 class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap, required this.hasCustomizations});
+  const _AddButton({
+    required this.onTap,
+    required this.hasCustomizations,
+    required this.label,
+  });
   final VoidCallback onTap;
   final bool hasCustomizations;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +253,7 @@ class _AddButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'ADD',
+                label,
                 style: AppTypography.labelLarge.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,

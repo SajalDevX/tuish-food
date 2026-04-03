@@ -10,6 +10,7 @@ abstract final class RouteNames {
   // Customer
   static const String customerHome = 'customer-home';
   static const String restaurantDetail = 'restaurant-detail';
+  static const String restaurantMenuItem = 'restaurant-menu-item';
   static const String search = 'search';
   static const String customerOrders = 'customer-orders';
   static const String orderDetail = 'order-detail';

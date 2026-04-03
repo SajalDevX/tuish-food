@@ -13,6 +13,8 @@ abstract final class RoutePaths {
   // Customer
   static const String customerHome = '/customer/home';
   static const String restaurantDetail = '/customer/home/restaurant/:id';
+  static const String restaurantMenuItem =
+      '/customer/home/restaurant/:id/item/:itemId';
   static const String searchScreen = '/customer/home/search';
 
   static const String customerOrders = '/customer/orders';
