@@ -150,6 +150,10 @@ class CheckoutNotifier extends Notifier<CheckoutState> {
     state = state.copyWith(couponCode: null, discount: 0);
   }
 
+  void setDiscount(double amount, {String? couponCode}) {
+    state = state.copyWith(discount: amount, couponCode: couponCode);
+  }
+
   /// Places an order for COD flow (creates order + marks payment pending).
   Future<String?> placeOrder(PlaceOrderParams params) async {
     state = state.copyWith(isPlacingOrder: true, errorMessage: null);

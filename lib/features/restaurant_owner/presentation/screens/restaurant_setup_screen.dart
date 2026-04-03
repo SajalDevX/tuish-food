@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
@@ -122,13 +123,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
         'cuisineTypes': _selectedCuisines.toList(),
         'tags': _selectedCuisines.map((c) => c.toLowerCase()).toList(),
         'ownerUid': user.uid,
-        'address': {
-          'addressLine1': _streetController.text.trim(),
-          'city': _cityController.text.trim(),
-          'state': _stateController.text.trim(),
-          'latitude': 0.0,
-          'longitude': 0.0,
-        },
+        'address': await _buildAddress(),
         'deliveryFee': double.tryParse(_deliveryFeeController.text) ?? 0,
         'minimumOrderAmount': double.tryParse(_minOrderController.text) ?? 0,
         'freeDeliveryAbove':
@@ -177,6 +172,34 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<Map<String, dynamic>> _buildAddress() async {
+    final street = _streetController.text.trim();
+    final city = _cityController.text.trim();
+    final state = _stateController.text.trim();
+    double latitude = 0.0;
+    double longitude = 0.0;
+
+    try {
+      final locations = await geocoding.locationFromAddress(
+        '$street, $city, $state',
+      );
+      if (locations.isNotEmpty) {
+        latitude = locations.first.latitude;
+        longitude = locations.first.longitude;
+      }
+    } catch (_) {
+      // Geocoding failed — keep 0,0 as fallback
+    }
+
+    return {
+      'addressLine1': street,
+      'city': city,
+      'state': state,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
   }
 
   // ---------------------------------------------------------------------------

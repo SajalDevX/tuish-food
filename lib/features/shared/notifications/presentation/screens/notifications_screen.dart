@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
@@ -9,6 +10,7 @@ import 'package:tuish_food/core/widgets/empty_state_widget.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/features/shared/notifications/presentation/providers/notifications_provider.dart';
 import 'package:tuish_food/features/shared/notifications/presentation/widgets/notification_tile.dart';
+import 'package:tuish_food/routing/route_names.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -179,22 +181,26 @@ class NotificationsScreen extends ConsumerWidget {
       case 'order_update':
         final orderId = data['orderId'] as String?;
         if (orderId != null && context.mounted) {
-          // Navigate to order detail - uses GoRouter context extension
-          // context.push('/orders/$orderId');
+          context.pushNamed(
+            RouteNames.orderDetail,
+            pathParameters: {'orderId': orderId},
+          );
         }
       case 'chat':
         final chatId = data['chatId'] as String?;
         if (chatId != null && context.mounted) {
-          // context.push('/chat/$chatId');
+          context.pushNamed(
+            RouteNames.orderChat,
+            pathParameters: {'orderId': chatId},
+          );
         }
       case 'promotion':
-        final promotionId = data['promotionId'] as String?;
-        if (promotionId != null && context.mounted) {
-          // context.push('/promotions/$promotionId');
+        if (context.mounted) {
+          context.goNamed(RouteNames.customerHome);
         }
       case 'earnings':
         if (context.mounted) {
-          // context.push('/earnings');
+          context.goNamed(RouteNames.deliveryEarnings);
         }
       default:
         break;

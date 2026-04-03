@@ -31,6 +31,7 @@ dependencies:
   # Maps & Location
   google_maps_flutter: any
   geolocator: any
+  geocoding: any
 
   # Networking & Connectivity
   connectivity_plus: any

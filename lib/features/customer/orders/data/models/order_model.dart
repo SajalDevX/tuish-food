@@ -18,7 +18,7 @@ class OrderItemModel extends OrderItem {
 
   factory OrderItemModel.fromMap(Map<String, dynamic> map) {
     return OrderItemModel(
-      id: map['id'] as String? ?? '',
+      id: map['id'] as String? ?? map['menuItemId'] as String? ?? '',
       name: map['name'] as String? ?? '',
       imageUrl: map['imageUrl'] as String?,
       quantity: (map['quantity'] as num?)?.toInt() ?? 1,

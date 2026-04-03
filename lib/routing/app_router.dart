@@ -15,6 +15,7 @@ import 'package:tuish_food/features/customer/home/presentation/screens/search_sc
 import 'package:tuish_food/features/customer/orders/presentation/screens/order_detail_screen.dart';
 import 'package:tuish_food/features/customer/orders/presentation/screens/orders_list_screen.dart';
 import 'package:tuish_food/features/customer/menu/presentation/screens/menu_item_detail_screen.dart';
+import 'package:tuish_food/features/customer/profile/domain/entities/address.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/add_address_screen.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/addresses_screen.dart';
 import 'package:tuish_food/features/customer/profile/presentation/screens/edit_profile_screen.dart';
@@ -250,23 +251,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                         RestaurantDetailScreen(restaurantId: id),
                       );
                     },
+                    routes: [
+                      GoRoute(
+                        path: 'item/:itemId',
+                        name: RouteNames.restaurantMenuItem,
+                        builder: (context, state) {
+                          final restaurantId = state.pathParameters['id']!;
+                          final itemId = state.pathParameters['itemId']!;
+                          return MenuItemDetailScreen(
+                            restaurantId: restaurantId,
+                            itemId: itemId,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'search',
                     name: RouteNames.search,
                     builder: (context, state) => const SearchScreen(),
-                  ),
-                  GoRoute(
-                    path: 'item/:itemId',
-                    name: RouteNames.restaurantMenuItem,
-                    builder: (context, state) {
-                      final restaurantId = state.pathParameters['id']!;
-                      final itemId = state.pathParameters['itemId']!;
-                      return MenuItemDetailScreen(
-                        restaurantId: restaurantId,
-                        itemId: itemId,
-                      );
-                    },
                   ),
                 ],
               ),
@@ -354,7 +357,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                       GoRoute(
                         path: 'add',
                         name: RouteNames.addAddress,
-                        builder: (context, state) => const AddAddressScreen(),
+                        builder: (context, state) => AddAddressScreen(
+                          existingAddress: state.extra is Address
+                              ? state.extra as Address
+                              : null,
+                        ),
                       ),
                     ],
                   ),

@@ -30,6 +30,11 @@ class NotificationService {
 
   bool _initialized = false;
 
+  /// Emits the route payload when a user taps a notification.
+  /// Listen to this stream in the app shell to navigate.
+  final _routeController = StreamController<String>.broadcast();
+  Stream<String> get onNotificationRoute => _routeController.stream;
+
   // ---------------------------------------------------------------------------
   // Android notification channel
   // ---------------------------------------------------------------------------
@@ -154,9 +159,10 @@ class NotificationService {
     debugPrint(
       'NotificationService: notification tapped -- payload=${response.payload}',
     );
-    // Navigation based on the payload can be handled at the app level by
-    // listening to FirebaseMessaging.onMessageOpenedApp or by providing a
-    // callback during init.
+    final route = response.payload;
+    if (route != null && route.isNotEmpty) {
+      _routeController.add(route);
+    }
   }
 
   // ---------------------------------------------------------------------------

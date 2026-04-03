@@ -101,9 +101,13 @@ class DeliveryHomeScreen extends ConsumerWidget {
                 const SizedBox(width: AppSizes.s12),
                 Expanded(
                   child: _StatCard(
-                    icon: Icons.star_outline,
-                    label: 'Rating',
-                    value: '4.8',
+                    icon: Icons.check_circle_outline,
+                    label: 'Completed',
+                    value: deliveryHistory.when(
+                      data: (orders) => '${orders.length}',
+                      loading: () => '-',
+                      error: (_, _) => '0',
+                    ),
                     color: AppColors.starFilled,
                   ),
                 ),

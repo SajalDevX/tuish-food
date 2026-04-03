@@ -14,6 +14,7 @@ import 'package:tuish_food/features/customer/cart/presentation/providers/cart_pr
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_item_tile.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/cart_summary.dart';
 import 'package:tuish_food/features/customer/cart/presentation/widgets/coupon_input.dart';
+import 'package:tuish_food/features/customer/checkout/presentation/providers/checkout_provider.dart';
 import 'package:tuish_food/routing/route_names.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -155,6 +156,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             label:
                 '${AppStrings.checkout} - \u20B9${(cart.subtotal + 40 + cart.subtotal * 0.05 - _discount).toStringAsFixed(0)}',
             onPressed: () {
+              if (_appliedCoupon != null && _discount > 0) {
+                ref.read(checkoutNotifierProvider.notifier)
+                  ..removeCoupon()
+                  // Set the pre-calculated discount directly so checkout
+                  // reflects what the user already saw in the cart.
+                  ..setDiscount(_discount, couponCode: _appliedCoupon);
+              }
               context.pushNamed(RouteNames.checkout);
             },
           ),

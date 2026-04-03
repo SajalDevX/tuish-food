@@ -7,23 +7,10 @@ import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/providers/checkout_provider.dart';
-
-/// A simple address data class used within checkout address selection.
-/// In a full implementation this would come from the profile feature's
-/// address entity and provider.
-class _SavedAddress {
-  final String id;
-  final String label;
-  final String address;
-  final IconData icon;
-
-  const _SavedAddress({
-    required this.id,
-    required this.label,
-    required this.address,
-    required this.icon,
-  });
-}
+import 'package:tuish_food/features/customer/profile/domain/entities/address.dart';
+import 'package:tuish_food/features/customer/profile/presentation/providers/profile_provider.dart';
+import 'package:tuish_food/injection_container.dart';
+import 'package:tuish_food/routing/route_names.dart';
 
 class AddressSelectionScreen extends ConsumerStatefulWidget {
   const AddressSelectionScreen({super.key});
@@ -35,34 +22,20 @@ class AddressSelectionScreen extends ConsumerStatefulWidget {
 
 class _AddressSelectionScreenState
     extends ConsumerState<AddressSelectionScreen> {
-  // In production, these would come from the profile provider's addresses.
-  // Using sample data to demonstrate the UI flow.
-  final _addresses = const <_SavedAddress>[
-    _SavedAddress(
-      id: 'home',
-      label: 'Home',
-      address: '123 Main Street, Apartment 4B, New Delhi 110001',
-      icon: Icons.home,
-    ),
-    _SavedAddress(
-      id: 'work',
-      label: 'Work',
-      address: '456 Business Park, Tower A, Floor 12, Gurugram 122001',
-      icon: Icons.work,
-    ),
-  ];
-
   String? _selectedId;
 
   @override
   void initState() {
     super.initState();
-    final currentId = ref.read(checkoutNotifierProvider).deliveryAddressId;
-    _selectedId = currentId;
+    _selectedId = ref.read(checkoutNotifierProvider).deliveryAddressId;
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final userId = currentUser?.uid ?? '';
+    final addressesAsync = ref.watch(addressesProvider(userId));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Address'),
@@ -71,135 +44,204 @@ class _AddressSelectionScreenState
           onPressed: () => context.pop(),
         ),
       ),
-      body: _addresses.isEmpty
-          ? EmptyStateWidget(
-              message: 'No saved addresses.\nAdd a new address to continue.',
-              icon: Icons.location_off_outlined,
-              actionLabel: 'Add Address',
-              onAction: () {
-                // Navigate to add address screen
-                // In production: context.pushNamed(RouteNames.addAddress);
-              },
-            )
-          : ListView(
-              padding: AppSizes.paddingAllM,
-              children: [
-                ..._addresses.map((address) {
-                  final isSelected = _selectedId == address.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: AppSizes.s12),
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedId = address.id),
-                      borderRadius: AppSizes.borderRadiusM,
-                      child: Container(
-                        padding: AppSizes.paddingAllM,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary.withValues(alpha: 0.05)
-                              : AppColors.surface,
-                          borderRadius: AppSizes.borderRadiusM,
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.divider,
-                            width: isSelected ? 2 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? AppColors.primary.withValues(alpha: 0.1)
-                                    : AppColors.background,
-                                borderRadius: AppSizes.borderRadiusS,
-                              ),
-                              child: Icon(
-                                address.icon,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(width: AppSizes.s12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    address.label,
-                                    style: AppTypography.titleSmall,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    address.address,
-                                    style: AppTypography.bodySmall,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // ignore: deprecated_member_use
-                            Radio<String>(
-                              value: address.id,
-                              // ignore: deprecated_member_use
-                              groupValue: _selectedId,
-                              // ignore: deprecated_member_use
-                              onChanged: (v) => setState(() => _selectedId = v),
-                              activeColor: AppColors.primary,
-                            ),
-                          ],
+      body: addressesAsync.when(
+        data: (addresses) => _buildAddressList(context, addresses),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline,
+                  size: AppSizes.iconXL, color: AppColors.error),
+              const SizedBox(height: AppSizes.s16),
+              Text(error.toString(),
+                  style: AppTypography.bodyMedium, textAlign: TextAlign.center),
+              const SizedBox(height: AppSizes.s16),
+              TextButton(
+                onPressed: () => ref.invalidate(addressesProvider(userId)),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddressList(BuildContext context, List<Address> addresses) {
+    // Auto-select default if nothing is selected yet
+    if (_selectedId == null && addresses.isNotEmpty) {
+      final defaultAddr = addresses.firstWhere(
+        (a) => a.isDefault,
+        orElse: () => addresses.first,
+      );
+      _selectedId = defaultAddr.id;
+    }
+
+    final currentUser = ref.read(currentUserProvider);
+    final userId = currentUser?.uid ?? '';
+
+    if (addresses.isEmpty) {
+      return EmptyStateWidget(
+        message: 'No saved addresses.\nAdd one to continue.',
+        icon: Icons.location_off_outlined,
+        actionLabel: 'Add Address',
+        onAction: () async {
+          await context.pushNamed(RouteNames.addAddress);
+          ref.invalidate(addressesProvider(userId));
+        },
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            padding: AppSizes.paddingAllM,
+            children: [
+              ...addresses.map((address) {
+                final isSelected = _selectedId == address.id;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSizes.s12),
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedId = address.id),
+                    borderRadius: AppSizes.borderRadiusM,
+                    child: Container(
+                      padding: AppSizes.paddingAllM,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.05)
+                            : AppColors.surface,
+                        borderRadius: AppSizes.borderRadiusM,
+                        border: Border.all(
+                          color:
+                              isSelected ? AppColors.primary : AppColors.divider,
+                          width: isSelected ? 2 : 1,
                         ),
                       ),
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: AppSizes.s16),
-
-                // Add new address
-                OutlinedButton.icon(
-                  onPressed: () {
-                    // In production this navigates to add address screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add address coming soon')),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add New Address'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: AppSizes.s12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSizes.borderRadiusM,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary.withValues(alpha: 0.1)
+                                  : AppColors.background,
+                              borderRadius: AppSizes.borderRadiusS,
+                            ),
+                            child: Icon(
+                              _iconForLabel(address.label),
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSizes.s12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(address.displayLabel,
+                                        style: AppTypography.titleSmall),
+                                    if (address.isDefault) ...[
+                                      const SizedBox(width: AppSizes.s8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary
+                                              .withValues(alpha: 0.12),
+                                          borderRadius: AppSizes.borderRadiusPill,
+                                        ),
+                                        child: Text(
+                                          'Default',
+                                          style: AppTypography.labelSmall
+                                              .copyWith(
+                                                  color: AppColors.primary),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  address.fullAddress,
+                                  style: AppTypography.bodySmall,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // ignore: deprecated_member_use
+                          Radio<String>(
+                            value: address.id,
+                            // ignore: deprecated_member_use
+                            groupValue: _selectedId,
+                            // ignore: deprecated_member_use
+                            onChanged: (v) => setState(() => _selectedId = v),
+                            activeColor: AppColors.primary,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-      bottomNavigationBar: _selectedId != null
-          ? SafeArea(
-              child: Padding(
-                padding: AppSizes.paddingAllM,
-                child: TuishButton.primary(
-                  label: 'Confirm Address',
-                  onPressed: () {
-                    final selected = _addresses.firstWhere(
-                      (a) => a.id == _selectedId,
-                    );
-                    ref
-                        .read(checkoutNotifierProvider.notifier)
-                        .setDeliveryAddress(selected.id, selected.address);
-                    context.pop();
-                  },
+                );
+              }),
+
+              const SizedBox(height: AppSizes.s8),
+
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await context.pushNamed(RouteNames.addAddress);
+                  ref.invalidate(addressesProvider(userId));
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Add New Address'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSizes.s12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: AppSizes.borderRadiusM),
                 ),
               ),
-            )
-          : null,
+            ],
+          ),
+        ),
+
+        if (_selectedId != null)
+          SafeArea(
+            child: Padding(
+              padding: AppSizes.paddingAllM,
+              child: TuishButton.primary(
+                label: 'Confirm Address',
+                onPressed: () {
+                  final selected = addresses.firstWhere(
+                    (a) => a.id == _selectedId,
+                  );
+                  ref
+                      .read(checkoutNotifierProvider.notifier)
+                      .setDeliveryAddress(selected.id, selected.fullAddress);
+                  context.pop();
+                },
+              ),
+            ),
+          ),
+      ],
     );
+  }
+
+  IconData _iconForLabel(String label) {
+    return switch (label.toLowerCase()) {
+      'home' => Icons.home,
+      'work' => Icons.work,
+      _ => Icons.location_on,
+    };
   }
 }

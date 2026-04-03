@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
@@ -80,9 +84,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _handleSendImage() async {
-    // Image picking functionality - placeholder for image_picker integration
-    // In production, this would use image_picker to select an image,
-    // upload it to Firebase Storage, then send the message with imageUrl
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 75,
+    );
+    if (image == null) return;
+
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storageRef = FirebaseStorage.instance
+          .ref('chats/${widget.chatId}/$timestamp.jpg');
+      await storageRef.putFile(
+        File(image.path),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      await ref.read(sendMessageProvider.notifier).sendMessage(
+            widget.chatId,
+            '',
+            imageUrl: downloadUrl,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send image: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

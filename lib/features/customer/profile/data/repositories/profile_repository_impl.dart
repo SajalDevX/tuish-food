@@ -77,4 +77,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
       return Left(ServerFailure(e.message));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> updateAddress(
+      String userId, Address address) async {
+    try {
+      await _remoteDataSource.updateAddress(userId, address);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    }
+  }
 }

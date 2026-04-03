@@ -64,8 +64,10 @@ class AddressesScreen extends ConsumerWidget {
                     }
                   },
                   onEdit: () {
-                    // Navigate to add address screen with pre-filled data
-                    context.pushNamed(RouteNames.addAddress);
+                    context.pushNamed(
+                      RouteNames.addAddress,
+                      extra: address,
+                    );
                   },
                   onDelete: () async {
                     final confirmed = await ConfirmationDialog.show(

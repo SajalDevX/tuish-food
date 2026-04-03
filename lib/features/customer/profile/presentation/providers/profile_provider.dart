@@ -140,4 +140,19 @@ class AddressManagementNotifier extends Notifier<AsyncValue<void>> {
       },
     );
   }
+
+  Future<bool> updateAddress(String userId, Address address) async {
+    state = const AsyncLoading();
+    final result = await _repository.updateAddress(userId, address);
+    return result.fold(
+      (failure) {
+        state = AsyncError(failure.message, StackTrace.current);
+        return false;
+      },
+      (_) {
+        state = const AsyncData(null);
+        return true;
+      },
+    );
+  }
 }

@@ -21,4 +21,6 @@ abstract class ProfileRepository {
 
   Future<Either<Failure, void>> setDefaultAddress(
       String userId, String addressId);
+
+  Future<Either<Failure, void>> updateAddress(String userId, Address address);
 }

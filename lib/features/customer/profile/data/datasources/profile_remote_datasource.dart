@@ -16,6 +16,7 @@ abstract class ProfileRemoteDataSource {
 
   Future<List<AddressModel>> getAddresses(String userId);
   Future<void> addAddress(String userId, Address address);
+  Future<void> updateAddress(String userId, Address address);
   Future<void> deleteAddress(String userId, String addressId);
   Future<void> setDefaultAddress(String userId, String addressId);
 }
@@ -88,6 +89,21 @@ class ProfileRemoteDataSourceImpl implements ProfileRemoteDataSource {
       }
     } on FirebaseException catch (e) {
       throw ServerException(e.message ?? 'Failed to add address');
+    }
+  }
+
+  @override
+  Future<void> updateAddress(String userId, Address address) async {
+    try {
+      final model = AddressModel.fromEntity(address);
+      if (address.isDefault) {
+        await _clearDefaultAddresses(userId);
+      }
+      await _addressesRef(userId)
+          .doc(address.id)
+          .set(model.toFirestore(), SetOptions(merge: true));
+    } on FirebaseException catch (e) {
+      throw ServerException(e.message ?? 'Failed to update address');
     }
   }
 

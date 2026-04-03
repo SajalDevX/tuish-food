@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -166,14 +169,49 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       );
 
       if (image != null) {
-        // In production, upload to Firebase Storage and get URL
-        // For now, just show a placeholder message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Photo selected. Upload functionality pending.'),
-            ),
+        final currentUser = ref.read(currentUserProvider);
+        if (currentUser == null) return;
+
+        setState(() => _isLoading = true);
+        try {
+          final storageRef = ref
+              .read(firebaseStorageProvider)
+              .ref('users/${currentUser.uid}/profile.jpg');
+          await storageRef.putFile(
+            File(image.path),
+            SettableMetadata(contentType: 'image/jpeg'),
           );
+          final downloadUrl = await storageRef.getDownloadURL();
+
+          // Update profile with the new photo URL
+          await ref.read(updateProfileProvider.notifier).updateProfile(
+                userId: currentUser.uid,
+                photoUrl: downloadUrl,
+              );
+
+          setState(() {
+            _photoUrl = downloadUrl;
+            _isLoading = false;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile photo updated'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
+        } catch (e) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to upload photo: $e'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
       }
     }

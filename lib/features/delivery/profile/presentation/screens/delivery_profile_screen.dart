@@ -9,6 +9,7 @@ import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/confirmation_dialog.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tuish_food/features/delivery/dashboard/presentation/providers/delivery_dashboard_provider.dart';
 import 'package:tuish_food/features/delivery/profile/presentation/widgets/online_toggle.dart';
 import 'package:tuish_food/injection_container.dart';
 import 'package:tuish_food/routing/route_paths.dart';
@@ -63,24 +64,7 @@ class DeliveryProfileScreen extends ConsumerWidget {
             const SizedBox(height: AppSizes.s16),
 
             // Rating and total deliveries row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _StatChip(
-                  icon: Icons.star_rounded,
-                  iconColor: AppColors.starFilled,
-                  label: '4.8',
-                  subtitle: 'Rating',
-                ),
-                const SizedBox(width: AppSizes.s24),
-                _StatChip(
-                  icon: Icons.delivery_dining,
-                  iconColor: AppColors.secondary,
-                  label: '156',
-                  subtitle: 'Deliveries',
-                ),
-              ],
-            ),
+            _buildStatsRow(ref),
             const SizedBox(height: AppSizes.s24),
 
             // Online toggle
@@ -147,6 +131,27 @@ class DeliveryProfileScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStatsRow(WidgetRef ref) {
+    final history = ref.watch(deliveryHistoryProvider);
+    final count = history.when(
+      data: (orders) => '${orders.length}',
+      loading: () => '-',
+      error: (_, _) => '0',
+    );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _StatChip(
+          icon: Icons.delivery_dining,
+          iconColor: AppColors.secondary,
+          label: count,
+          subtitle: 'Deliveries',
+        ),
+      ],
     );
   }
 

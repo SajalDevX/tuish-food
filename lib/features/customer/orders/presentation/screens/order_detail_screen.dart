@@ -11,6 +11,8 @@ import 'package:tuish_food/core/extensions/datetime_extensions.dart';
 import 'package:tuish_food/core/widgets/confirmation_dialog.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
+import 'package:tuish_food/features/customer/cart/domain/entities/cart_item.dart';
+import 'package:tuish_food/features/customer/cart/presentation/providers/cart_provider.dart';
 import 'package:tuish_food/features/customer/orders/domain/entities/order.dart';
 import 'package:tuish_food/features/customer/orders/presentation/providers/order_provider.dart';
 import 'package:tuish_food/features/customer/orders/presentation/widgets/order_items_list.dart';
@@ -334,17 +336,46 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             label: AppStrings.reorder,
             icon: const Icon(Icons.replay,
                 color: AppColors.onSecondary, size: 20),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Items added to cart'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
-            },
+            onPressed: () => _handleReorder(context, order),
           ),
       ],
     );
+  }
+
+  Future<void> _handleReorder(
+      BuildContext context, CustomerOrder order) async {
+    final cartNotifier = ref.read(cartNotifierProvider.notifier);
+    final restaurantId = order.restaurantId;
+    final restaurantName = order.restaurantName ?? 'Restaurant';
+
+    for (final item in order.items) {
+      await cartNotifier.addItem(
+        CartItem(
+          menuItemId: item.id,
+          name: item.name,
+          imageUrl: item.imageUrl ?? '',
+          price: item.price,
+          quantity: item.quantity,
+        ),
+        restaurantId: restaurantId,
+        restaurantName: restaurantName,
+        context: context,
+      );
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${order.items.length} item(s) added to cart'),
+          backgroundColor: AppColors.success,
+          action: SnackBarAction(
+            label: 'View Cart',
+            textColor: Colors.white,
+            onPressed: () => context.goNamed(RouteNames.customerCart),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _handleCancelOrder(

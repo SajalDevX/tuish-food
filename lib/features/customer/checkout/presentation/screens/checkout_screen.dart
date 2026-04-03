@@ -206,11 +206,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       if (razorpayOrderId == null) return;
 
-      // TODO: Replace with your actual Razorpay key from env
-      const razorpayKeyId = String.fromEnvironment(
-        'RAZORPAY_KEY_ID',
-        defaultValue: 'rzp_test_XXXXXXXX',
-      );
+      const razorpayKeyId = String.fromEnvironment('RAZORPAY_KEY_ID');
+      if (razorpayKeyId.isEmpty) {
+        _showError('Payment is not configured. Please contact support.');
+        return;
+      }
 
       final options = {
         'key': razorpayKeyId,
@@ -374,7 +374,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             Padding(
               padding: AppSizes.paddingHorizontalM,
               child: CartSummary(
-                subtotal: cart.subtotal,
+                subtotal: subtotal,
                 deliveryFee: deliveryFee,
                 taxRate: taxRate,
                 tip: checkoutState.tip,
