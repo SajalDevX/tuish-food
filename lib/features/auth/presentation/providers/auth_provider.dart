@@ -50,6 +50,13 @@ final currentUserRoleProvider = FutureProvider<UserRole?>((ref) async {
     return authState.user.role;
   }
 
+  // While a role update is in progress (AuthLoading), don't fall through
+  // to the slow path which would read stale custom claims (e.g. "customer"
+  // set by onUserCreated). Return null so the router stays on splash.
+  if (authState is AuthLoading) {
+    return null;
+  }
+
   // Slow path: check custom claims + Firestore via repository
   final repository = ref.watch(authRepositoryProvider);
   final result = await repository.getUserRole();
@@ -172,7 +179,9 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> updateUserRole(String uid, UserRole role) async {
-    state = const AuthLoading();
+    // Keep current Authenticated state while updating — do NOT set AuthLoading.
+    // Setting AuthLoading would cause currentUserRoleProvider to fall through
+    // to the slow path and read stale custom claims (e.g. "customer").
     try {
       await _remoteDataSource.updateUserRole(uid, role);
       final result = await _repository.getCurrentUser();

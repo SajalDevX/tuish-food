@@ -43,11 +43,12 @@ class RestaurantRemoteDatasourceImpl implements RestaurantRemoteDatasource {
     double radiusKm = 10.0,
   }) async {
     try {
-      // Query active restaurants, ordered by rating.
+      // Query active, subscribed restaurants, ordered by rating.
       // For production, integrate geoflutterfire_plus for precise geo queries.
       // Here we fetch active restaurants and could filter by distance client-side.
       final snapshot = await _restaurantsRef
           .where('isActive', isEqualTo: true)
+          .where('isSubscriptionValid', isEqualTo: true)
           .orderBy('averageRating', descending: true)
           .limit(50)
           .get();
@@ -89,6 +90,7 @@ class RestaurantRemoteDatasourceImpl implements RestaurantRemoteDatasource {
       final searchTerm = query.trim().toLowerCase();
       final snapshot = await _restaurantsRef
           .where('isActive', isEqualTo: true)
+          .where('isSubscriptionValid', isEqualTo: true)
           .orderBy('averageRating', descending: true)
           .limit(50)
           .get();
@@ -129,6 +131,7 @@ class RestaurantRemoteDatasourceImpl implements RestaurantRemoteDatasource {
     try {
       final snapshot = await _restaurantsRef
           .where('isActive', isEqualTo: true)
+          .where('isSubscriptionValid', isEqualTo: true)
           .where('cuisineTypes', arrayContains: category.toLowerCase())
           .orderBy('averageRating', descending: true)
           .limit(30)

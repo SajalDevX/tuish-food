@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
+import 'package:tuish_food/core/constants/api_constants.dart';
 import 'package:tuish_food/core/constants/app_strings.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/empty_state_widget.dart';
@@ -206,14 +207,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       if (razorpayOrderId == null) return;
 
-      const razorpayKeyId = String.fromEnvironment('RAZORPAY_KEY_ID');
-      if (razorpayKeyId.isEmpty) {
-        _showError('Payment is not configured. Please contact support.');
-        return;
-      }
-
       final options = {
-        'key': razorpayKeyId,
+        'key': ApiConstants.razorpayKeyId,
         'amount': (total * 100).toInt(), // amount in paise
         'currency': 'INR',
         'name': 'Tuish Food',

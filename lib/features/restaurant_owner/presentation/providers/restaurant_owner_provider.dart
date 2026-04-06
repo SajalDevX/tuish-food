@@ -36,6 +36,14 @@ final myRestaurantIdProvider = Provider.autoDispose<String?>((ref) {
   return ref.watch(myRestaurantProvider).value?.id;
 });
 
+/// True once [myRestaurantProvider] has resolved AND returned null,
+/// meaning this owner has not set up a restaurant yet.
+/// Used by the router to auto-redirect first-time owners to setup.
+final needsRestaurantSetupProvider = Provider.autoDispose<bool>((ref) {
+  final restaurantAsync = ref.watch(myRestaurantProvider);
+  return restaurantAsync.hasValue && restaurantAsync.value == null;
+});
+
 // ---------------------------------------------------------------------------
 // Menu items for the owner's restaurant
 // ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ admin.initializeApp();
 // ── Auth triggers ───────────────────────────────────────────────────────────
 export {onUserCreated} from "./auth/on_user_created";
 export {setUserRole} from "./auth/set_user_role";
+export {selectUserRole} from "./auth/select_user_role";
 export {onUserDeleted} from "./auth/on_user_deleted";
 
 // ── Order triggers & callables ──────────────────────────────────────────────
@@ -55,3 +56,8 @@ export {createRazorpayOrder} from "./payments/create_razorpay_order";
 export {verifyRazorpayPayment} from "./payments/verify_razorpay_payment";
 export {razorpayWebhook} from "./payments/razorpay_webhook";
 export {processRazorpayRefund} from "./payments/process_razorpay_refund";
+
+// ── Subscriptions ──────────────────────────────────────────────────────────
+export {createSubscription} from "./subscriptions/create_subscription";
+export {cancelSubscription} from "./subscriptions/cancel_subscription";
+export {expireGracePeriods} from "./subscriptions/expire_grace_periods";

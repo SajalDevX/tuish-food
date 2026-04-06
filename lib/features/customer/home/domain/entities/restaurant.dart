@@ -60,6 +60,13 @@ class Restaurant extends Equatable {
   final RestaurantAddress address;
   final List<OperatingHours> operatingHours;
 
+  // Subscription fields
+  final String? subscriptionStatus;
+  final String? subscriptionId;
+  final DateTime? subscriptionCurrentEnd;
+  final DateTime? subscriptionGraceDeadline;
+  final bool isSubscriptionValid;
+
   const Restaurant({
     required this.id,
     required this.name,
@@ -81,6 +88,11 @@ class Restaurant extends Equatable {
     this.ownerUid,
     required this.address,
     required this.operatingHours,
+    this.subscriptionStatus,
+    this.subscriptionId,
+    this.subscriptionCurrentEnd,
+    this.subscriptionGraceDeadline,
+    this.isSubscriptionValid = true,
   });
 
   String get priceLevelLabel => '\$' * priceLevel;
@@ -91,6 +103,42 @@ class Restaurant extends Equatable {
 
   String get deliveryFeeLabel =>
       deliveryFee == 0 ? 'Free delivery' : '\$${deliveryFee.toStringAsFixed(2)}';
+
+  Restaurant copyWith({
+    String? subscriptionStatus,
+    String? subscriptionId,
+    DateTime? subscriptionCurrentEnd,
+    DateTime? subscriptionGraceDeadline,
+    bool? isSubscriptionValid,
+  }) {
+    return Restaurant(
+      id: id,
+      name: name,
+      description: description,
+      imageUrl: imageUrl,
+      coverImageUrl: coverImageUrl,
+      cuisineTypes: cuisineTypes,
+      tags: tags,
+      priceLevel: priceLevel,
+      isActive: isActive,
+      isOpen: isOpen,
+      preparationTimeMinutes: preparationTimeMinutes,
+      minimumOrderAmount: minimumOrderAmount,
+      deliveryFee: deliveryFee,
+      freeDeliveryAbove: freeDeliveryAbove,
+      averageRating: averageRating,
+      totalRatings: totalRatings,
+      totalOrders: totalOrders,
+      ownerUid: ownerUid,
+      address: address,
+      operatingHours: operatingHours,
+      subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      subscriptionId: subscriptionId ?? this.subscriptionId,
+      subscriptionCurrentEnd: subscriptionCurrentEnd ?? this.subscriptionCurrentEnd,
+      subscriptionGraceDeadline: subscriptionGraceDeadline ?? this.subscriptionGraceDeadline,
+      isSubscriptionValid: isSubscriptionValid ?? this.isSubscriptionValid,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -114,5 +162,10 @@ class Restaurant extends Equatable {
         ownerUid,
         address,
         operatingHours,
+        subscriptionStatus,
+        subscriptionId,
+        subscriptionCurrentEnd,
+        subscriptionGraceDeadline,
+        isSubscriptionValid,
       ];
 }

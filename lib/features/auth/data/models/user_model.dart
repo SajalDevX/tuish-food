@@ -26,7 +26,7 @@ class UserModel extends AppUser {
       phone: data['phone'] as String?,
       displayName: data['displayName'] as String?,
       photoUrl: data['photoUrl'] as String?,
-      role: UserRole.fromString(data['role'] as String?) ?? UserRole.customer,
+      role: UserRole.fromString(data['role'] as String?),
       isActive: data['isActive'] as bool? ?? true,
       isBanned: data['isBanned'] as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -36,7 +36,7 @@ class UserModel extends AppUser {
 
   factory UserModel.fromFirebaseUser(
     firebase_auth.User user, {
-    UserRole role = UserRole.customer,
+    UserRole? role,
   }) {
     return UserModel(
       uid: user.uid,
@@ -73,7 +73,7 @@ class UserModel extends AppUser {
       'phone': phone,
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'role': role.claimValue,
+      if (role != null) 'role': role!.claimValue,
       'isActive': isActive,
       'isBanned': isBanned,
       'createdAt': createdAt != null

@@ -34,6 +34,9 @@ class RoleSelectionScreen extends ConsumerWidget {
           ),
         );
       } else if (next is Authenticated) {
+        // Navigate directly based on selected role.
+        // Can't rely on splash → router chain here because of async
+        // timing issues with provider re-evaluation.
         final role = next.user.role;
         switch (role) {
           case UserRole.customer:
@@ -41,9 +44,12 @@ class RoleSelectionScreen extends ConsumerWidget {
           case UserRole.deliveryPartner:
             context.go(RoutePaths.deliveryHome);
           case UserRole.restaurantOwner:
-            context.go(RoutePaths.restaurantDashboard);
+            // First-time owner — always needs setup from role selection.
+            context.go(RoutePaths.restaurantSetup);
           case UserRole.admin:
             context.go(RoutePaths.adminDashboard);
+          case null:
+            break; // Stay on role selection
         }
       }
     });

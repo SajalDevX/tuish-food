@@ -6,8 +6,12 @@
  */
 
 import * as functions from "firebase-functions";
-
+import {defineSecret} from "firebase-functions/params";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const Razorpay = require("razorpay");
+
+const RAZORPAY_KEY_ID = defineSecret("RAZORPAY_KEY_ID");
+const RAZORPAY_KEY_SECRET = defineSecret("RAZORPAY_KEY_SECRET");
 
 const logger = functions.logger;
 
@@ -17,8 +21,9 @@ interface CreateRazorpayOrderInput {
   notes?: Record<string, string>;
 }
 
-export const createRazorpayOrder = functions.https.onCall(
-  async (data: CreateRazorpayOrderInput, context) => {
+export const createRazorpayOrder = functions
+  .runWith({secrets: [RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET]})
+  .https.onCall(async (data: CreateRazorpayOrderInput, context) => {
     // ── Auth check ──────────────────────────────────────────────────────
     if (!context.auth) {
       throw new functions.https.HttpsError(
@@ -46,8 +51,8 @@ export const createRazorpayOrder = functions.https.onCall(
 
     // ── Initialize Razorpay ─────────────────────────────────────────────
     const razorpay = new Razorpay({
-      key_id: functions.config().razorpay.key_id,
-      key_secret: functions.config().razorpay.key_secret,
+      key_id: RAZORPAY_KEY_ID.value(),
+      key_secret: RAZORPAY_KEY_SECRET.value(),
     });
 
     // ── Create order ────────────────────────────────────────────────────
@@ -78,5 +83,4 @@ export const createRazorpayOrder = functions.https.onCall(
         "Failed to create Razorpay order. Please try again."
       );
     }
-  }
-);
+  });

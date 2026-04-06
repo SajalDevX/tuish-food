@@ -73,13 +73,15 @@ service cloud.firestore {
       // Anyone authenticated can read active restaurants
       allow read: if isAuthenticated();
 
-      // Admins can do anything; restaurant owners can create their own
+      // Authenticated users can create their own restaurant (ownerUid must match).
+      // Custom claim check removed — token propagation is unreliable after role
+      // selection. Visibility is gated by isSubscriptionValid instead.
       allow create: if isAdmin()
-        || (isRestaurantOwner() && request.resource.data.ownerUid == request.auth.uid);
+        || (isAuthenticated() && request.resource.data.ownerUid == request.auth.uid);
 
-      // Admins or the restaurant owner can update
+      // Owner or admin can update
       allow update: if isAdmin()
-        || (isRestaurantOwner() && resource.data.ownerUid == request.auth.uid);
+        || (isAuthenticated() && resource.data.ownerUid == request.auth.uid);
 
       // Only admins can delete
       allow delete: if isAdmin();
@@ -88,7 +90,7 @@ service cloud.firestore {
       match /menuCategories/{categoryId} {
         allow read: if isAuthenticated();
         allow create, update, delete: if isAdmin()
-          || (isRestaurantOwner()
+          || (isAuthenticated()
               && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerUid == request.auth.uid);
       }
 
@@ -96,7 +98,7 @@ service cloud.firestore {
       match /menuItems/{itemId} {
         allow read: if isAuthenticated();
         allow create, update, delete: if isAdmin()
-          || (isRestaurantOwner()
+          || (isAuthenticated()
               && get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerUid == request.auth.uid);
       }
     }

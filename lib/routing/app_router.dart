@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:tuish_food/core/enums/user_role.dart';
+import 'package:tuish_food/features/auth/domain/entities/app_user.dart';
+import 'package:tuish_food/features/customer/home/domain/entities/restaurant.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/providers/restaurant_owner_provider.dart';
 import 'package:tuish_food/features/customer/cart/presentation/screens/cart_screen.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/address_selection_screen.dart';
 import 'package:tuish_food/features/customer/checkout/presentation/screens/checkout_screen.dart';
@@ -40,6 +43,7 @@ import 'package:tuish_food/features/auth/presentation/screens/forgot_password_sc
 import 'package:tuish_food/features/auth/presentation/screens/login_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/phone_verification_screen.dart';
 import 'package:tuish_food/features/auth/presentation/providers/auth_provider.dart';
+import 'package:tuish_food/features/auth/presentation/providers/auth_state.dart';
 import 'package:tuish_food/features/auth/presentation/screens/register_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:tuish_food/features/auth/presentation/screens/splash_screen.dart';
@@ -70,25 +74,57 @@ import 'package:tuish_food/routing/shell_routes/restaurant_owner_shell.dart';
 // Router provider
 // ---------------------------------------------------------------------------
 
+/// Listens to auth state changes and notifies GoRouter to re-run redirect,
+/// without recreating the router instance itself.
+class _RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+  late final ProviderSubscription<AsyncValue<AppUser?>> _authSub;
+  late final ProviderSubscription<AsyncValue<UserRole?>> _roleSub;
+  late final ProviderSubscription<AsyncValue<Restaurant?>> _restaurantSub;
+
+  _RouterNotifier(this._ref) {
+    _authSub = _ref.listen(appAuthStateProvider, (_, _) => notifyListeners());
+    _roleSub = _ref.listen(currentUserRoleProvider, (_, _) => notifyListeners());
+    _restaurantSub = _ref.listen(myRestaurantProvider, (_, _) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _authSub.close();
+    _roleSub.close();
+    _restaurantSub.close();
+    super.dispose();
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(appAuthStateProvider);
-  final roleAsync = ref.watch(currentUserRoleProvider);
+  final notifier = _RouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
     initialLocation: RoutePaths.splash,
     debugLogDiagnostics: true,
+    refreshListenable: notifier,
 
     // -------------------------------------------------------------------
-    // Global redirect
+    // Global redirect — reads state each time GoRouter triggers a redirect,
+    // but does NOT watch (so the router itself is never recreated).
     // -------------------------------------------------------------------
     redirect: (context, state) {
+      final authState = ref.read(appAuthStateProvider);
+      final roleAsync = ref.read(currentUserRoleProvider);
+      final notifierState = ref.read(authNotifierProvider);
+
       if (authState.isLoading) {
         return state.uri.toString() == RoutePaths.splash
             ? null
             : RoutePaths.splash;
       }
 
-      final isLoggedIn = authState.value != null;
+      // Treat as logged out if the notifier says Unauthenticated,
+      // even if the auth stream hasn't caught up yet.
+      final isLoggedIn =
+          authState.value != null && notifierState is! Unauthenticated;
       final currentPath = state.uri.toString();
       final isRoleSelectionRoute = currentPath == RoutePaths.roleSelection;
       final isAuthRoute =
@@ -101,11 +137,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (currentPath == RoutePaths.splash) {
-        if (!isLoggedIn) {
-          return RoutePaths.login;
-        }
-        if (role == null) {
-          return RoutePaths.roleSelection;
+        if (!isLoggedIn) return RoutePaths.login;
+        if (roleAsync.isLoading) return null; // stay on splash
+        if (role == null) return RoutePaths.roleSelection;
+        // Restaurant owners: wait for restaurant check before leaving splash
+        if (role == UserRole.restaurantOwner) {
+          final restaurantAsync = ref.read(myRestaurantProvider);
+          if (restaurantAsync.isLoading) return null; // stay on splash
+          if (restaurantAsync.hasValue && restaurantAsync.value == null) {
+            return RoutePaths.restaurantSetup;
+          }
         }
         return _homePathForRole(role);
       }
@@ -115,37 +156,49 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.login;
       }
 
-      // 2. Logged in users should still be able to access role selection.
-      //    All other auth routes redirect into the logged-in flow.
-      if (isLoggedIn && isAuthRoute && !isRoleSelectionRoute) {
+      // 2. Logged in on an auth route → redirect into the app.
+      //    Role selection is only allowed if the user has no role yet.
+      if (isLoggedIn && isAuthRoute) {
+        if (isRoleSelectionRoute && role == null) {
+          return null; // stay on role selection
+        }
         return _landingPathForRole(role);
       }
 
       // 3. Role-based protection
       if (isLoggedIn) {
-        if (role == null && !isRoleSelectionRoute) {
+        if (role == null) {
           return RoutePaths.roleSelection;
         }
 
         if (currentPath.startsWith('/customer') &&
-            role != UserRole.customer &&
-            role != null) {
+            role != UserRole.customer) {
           return _homePathForRole(role);
         }
         if (currentPath.startsWith('/delivery') &&
-            role != UserRole.deliveryPartner &&
-            role != null) {
+            role != UserRole.deliveryPartner) {
           return _homePathForRole(role);
         }
         if (currentPath.startsWith('/restaurant') &&
-            role != UserRole.restaurantOwner &&
-            role != null) {
+            role != UserRole.restaurantOwner) {
           return _homePathForRole(role);
         }
         if (currentPath.startsWith('/admin') &&
-            role != UserRole.admin &&
-            role != null) {
+            role != UserRole.admin) {
           return _homePathForRole(role);
+        }
+
+        // 4. Restaurant owner: check if they need setup.
+        //    Only block navigation when on splash (initial load).
+        //    Once on a /restaurant route, don't redirect back to splash.
+        if (role == UserRole.restaurantOwner &&
+            currentPath != RoutePaths.restaurantSetup &&
+            !currentPath.startsWith('/restaurant')) {
+          final restaurantAsync = ref.read(myRestaurantProvider);
+          if (restaurantAsync.isLoading) return null; // stay where we are
+          if (restaurantAsync.hasValue && restaurantAsync.value == null) {
+            return RoutePaths.restaurantSetup;
+          }
         }
       }
 

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:tuish_food/core/constants/firebase_constants.dart';
@@ -102,12 +103,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       await user.updateDisplayName(displayName);
       await user.reload();
 
-      // Create user model
+      // Create user model — no role yet; user picks on role selection screen
       final userModel = UserModel(
         uid: user.uid,
         email: email,
         displayName: displayName,
-        role: UserRole.customer,
         isActive: true,
         isBanned: false,
         createdAt: DateTime.now(),
@@ -281,10 +281,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> updateUserRole(String uid, UserRole role) async {
     try {
-      await _usersRef.doc(uid).update({
-        'role': role.claimValue,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      // Call Cloud Function to set both custom claims AND Firestore atomically.
+      // This ensures Firestore security rules see the correct role claim.
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'selectUserRole',
+        options: HttpsCallableOptions(timeout: const Duration(seconds: 30)),
+      );
+      await callable.call<Map<String, dynamic>>({'role': role.claimValue});
+
+      // Force token refresh so the new custom claim is available immediately
+      await _firebaseAuth.currentUser?.getIdToken(true);
     } catch (e) {
       throw ServerException('Failed to update user role: ${e.toString()}');
     }

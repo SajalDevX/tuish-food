@@ -106,7 +106,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
         );
       } else if (next is Authenticated) {
-        context.go(RoutePaths.roleSelection);
+        // Navigate to splash and let the router redirect based on role.
+        context.go(RoutePaths.splash);
       }
     });
 

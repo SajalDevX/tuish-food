@@ -9,11 +9,13 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as crypto from "crypto";
+import {defineSecret} from "firebase-functions/params";
 import {
   Collections,
   PaymentStatuses,
-  UserRoles,
 } from "../utils/constants";
+
+const RAZORPAY_KEY_SECRET = defineSecret("RAZORPAY_KEY_SECRET");
 
 const logger = functions.logger;
 
@@ -24,21 +26,14 @@ interface VerifyRazorpayPaymentInput {
   orderData: Record<string, unknown>;
 }
 
-export const verifyRazorpayPayment = functions.https.onCall(
-  async (data: VerifyRazorpayPaymentInput, context) => {
-    // ── Auth check (customer role) ──────────────────────────────────────
+export const verifyRazorpayPayment = functions
+  .runWith({secrets: [RAZORPAY_KEY_SECRET]})
+  .https.onCall(async (data: VerifyRazorpayPaymentInput, context) => {
+    // ── Auth check ─────────────────────────────────────────────────────
     if (!context.auth) {
       throw new functions.https.HttpsError(
         "unauthenticated",
         "You must be signed in."
-      );
-    }
-
-    const callerRole = context.auth.token.role as string | undefined;
-    if (callerRole !== UserRoles.CUSTOMER) {
-      throw new functions.https.HttpsError(
-        "permission-denied",
-        "Only customers can verify payments."
       );
     }
 
@@ -68,7 +63,7 @@ export const verifyRazorpayPayment = functions.https.onCall(
     }
 
     // ── Verify signature ────────────────────────────────────────────────
-    const keySecret = functions.config().razorpay.key_secret;
+    const keySecret = RAZORPAY_KEY_SECRET.value();
     const expectedSignature = crypto
       .createHmac("sha256", keySecret)
       .update(razorpayOrderId + "|" + razorpayPaymentId)
@@ -118,5 +113,4 @@ export const verifyRazorpayPayment = functions.https.onCall(
         "Payment verified but failed to create order. Please contact support."
       );
     }
-  }
-);
+  });

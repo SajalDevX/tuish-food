@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/image_picker_field.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_text_field.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
@@ -43,10 +44,10 @@ class _AddMenuItemScreenState extends ConsumerState<AddMenuItemScreen> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _discountedPriceController = TextEditingController();
-  final _imageUrlController = TextEditingController();
   final _prepTimeController = TextEditingController();
 
   String? _selectedCategory;
+  String? _imageUrl;
   bool _isVeg = true;
   bool _isSaving = false;
 
@@ -56,7 +57,6 @@ class _AddMenuItemScreenState extends ConsumerState<AddMenuItemScreen> {
     _descriptionController.dispose();
     _priceController.dispose();
     _discountedPriceController.dispose();
-    _imageUrlController.dispose();
     _prepTimeController.dispose();
     super.dispose();
   }
@@ -92,7 +92,7 @@ class _AddMenuItemScreenState extends ConsumerState<AddMenuItemScreen> {
         'isVegetarian': _isVeg,
         'isAvailable': true,
         'isPopular': false,
-        'imageUrl': _imageUrlController.text.trim(),
+        'imageUrl': _imageUrl ?? '',
         'preparationTimeMinutes':
             int.tryParse(_prepTimeController.text.trim()) ?? 15,
         'sortOrder': 0,
@@ -320,12 +320,20 @@ class _AddMenuItemScreenState extends ConsumerState<AddMenuItemScreen> {
             ),
             const SizedBox(height: AppSizes.s16),
 
-            TuishTextField(
-              label: 'Image URL',
-              hint: 'https://example.com/photo.jpg',
-              controller: _imageUrlController,
-              keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.next,
+            Text('Item Photo', style: AppTypography.labelLarge),
+            const SizedBox(height: AppSizes.s8),
+            ImagePickerField(
+              imageUrl: _imageUrl,
+              storagePath: () {
+                final restaurantId =
+                    ref.read(myRestaurantIdProvider) ?? 'unknown';
+                return 'restaurants/$restaurantId/menu_items/${DateTime.now().millisecondsSinceEpoch}.jpg';
+              },
+              label: 'Add Photo',
+              isCircle: false,
+              aspectRatio: 1.0,
+              onUploaded: (url) =>
+                  setState(() => _imageUrl = url.isEmpty ? null : url),
             ),
             const SizedBox(height: AppSizes.s16),
 

@@ -16,7 +16,7 @@ class UserTableRow extends StatelessWidget {
   final VoidCallback? onTap;
 
   Color _roleColor() {
-    return switch (user.role.claimValue) {
+    return switch (user.role?.claimValue) {
       'admin' => AppColors.primary,
       'deliveryPartner' => AppColors.secondary,
       _ => AppColors.info,
@@ -68,7 +68,7 @@ class UserTableRow extends StatelessWidget {
               borderRadius: AppSizes.borderRadiusPill,
             ),
             child: Text(
-              user.role.displayName,
+              user.role?.displayName ?? 'No Role',
               style: AppTypography.labelSmall.copyWith(
                 color: _roleColor(),
                 fontWeight: FontWeight.w600,

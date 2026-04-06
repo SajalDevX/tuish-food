@@ -1,4 +1,11 @@
 abstract final class ApiConstants {
+  // Razorpay — key_id is public (safe to be in source).
+  // Override at build time via --dart-define=RAZORPAY_KEY_ID=<prod_key>.
+  static const String razorpayKeyId = String.fromEnvironment(
+    'RAZORPAY_KEY_ID',
+    defaultValue: 'rzp_test_Sa4o1NtNOTCVfD',
+  );
+
   // Cloud Functions callable endpoints
   static const String setUserRole = 'setUserRole';
   static const String calculateFees = 'calculateFees';
@@ -11,6 +18,8 @@ abstract final class ApiConstants {
   static const String verifyRazorpayPayment = 'verifyRazorpayPayment';
   static const String processRazorpayRefund = 'processRazorpayRefund';
   static const String sendPromoNotification = 'sendPromoNotification';
+  static const String createSubscription = 'createSubscription';
+  static const String cancelSubscription = 'cancelSubscription';
 
   // Timeouts
   static const Duration defaultTimeout = Duration(seconds: 30);

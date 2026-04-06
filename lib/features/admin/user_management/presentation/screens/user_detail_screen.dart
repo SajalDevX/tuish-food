@@ -96,13 +96,13 @@ class UserDetailScreen extends ConsumerWidget {
                     vertical: AppSizes.s4,
                   ),
                   decoration: BoxDecoration(
-                    color: _roleColor(user.role).withValues(alpha: 0.1),
+                    color: _roleColor(user.role ?? UserRole.customer).withValues(alpha: 0.1),
                     borderRadius: AppSizes.borderRadiusPill,
                   ),
                   child: Text(
-                    user.role.displayName,
+                    user.role?.displayName ?? 'No Role',
                     style: AppTypography.labelMedium.copyWith(
-                      color: _roleColor(user.role),
+                      color: _roleColor(user.role ?? UserRole.customer),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

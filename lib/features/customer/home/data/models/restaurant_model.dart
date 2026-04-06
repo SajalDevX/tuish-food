@@ -23,6 +23,11 @@ class RestaurantModel extends Restaurant {
     required super.totalOrders,
     required super.address,
     required super.operatingHours,
+    super.subscriptionStatus,
+    super.subscriptionId,
+    super.subscriptionCurrentEnd,
+    super.subscriptionGraceDeadline,
+    super.isSubscriptionValid,
   });
 
   factory RestaurantModel.fromFirestore(DocumentSnapshot doc) {
@@ -73,6 +78,13 @@ class RestaurantModel extends Restaurant {
       totalOrders: data['totalOrders'] as int? ?? 0,
       address: address,
       operatingHours: operatingHours,
+      subscriptionStatus: data['subscriptionStatus'] as String?,
+      subscriptionId: data['subscriptionId'] as String?,
+      subscriptionCurrentEnd:
+          (data['subscriptionCurrentEnd'] as Timestamp?)?.toDate(),
+      subscriptionGraceDeadline:
+          (data['subscriptionGraceDeadline'] as Timestamp?)?.toDate(),
+      isSubscriptionValid: data['isSubscriptionValid'] as bool? ?? true,
     );
   }
 
@@ -134,6 +146,11 @@ class RestaurantModel extends Restaurant {
       totalOrders: restaurant.totalOrders,
       address: restaurant.address,
       operatingHours: restaurant.operatingHours,
+      subscriptionStatus: restaurant.subscriptionStatus,
+      subscriptionId: restaurant.subscriptionId,
+      subscriptionCurrentEnd: restaurant.subscriptionCurrentEnd,
+      subscriptionGraceDeadline: restaurant.subscriptionGraceDeadline,
+      isSubscriptionValid: restaurant.isSubscriptionValid,
     );
   }
 }

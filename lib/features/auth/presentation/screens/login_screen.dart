@@ -143,7 +143,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           ),
         );
       } else if (next is Authenticated) {
-        context.go(RoutePaths.roleSelection);
+        // Navigate to splash and let the router redirect based on role.
+        // Returning users (with a role) go straight to home;
+        // new users (no role) get sent to role selection.
+        context.go(RoutePaths.splash);
       }
     });
 

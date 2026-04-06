@@ -8,7 +8,7 @@ class AppUser extends Equatable {
   final String? phone;
   final String? displayName;
   final String? photoUrl;
-  final UserRole role;
+  final UserRole? role;
   final bool isActive;
   final bool isBanned;
   final DateTime? createdAt;
@@ -20,7 +20,7 @@ class AppUser extends Equatable {
     this.phone,
     this.displayName,
     this.photoUrl,
-    this.role = UserRole.customer,
+    this.role,
     this.isActive = true,
     this.isBanned = false,
     this.createdAt,

@@ -22,6 +22,7 @@ export const SubCollections = {
   MENU_CATEGORIES: "menuCategories",
   MENU_ITEMS: "menuItems",
   MESSAGES: "messages",
+  SUBSCRIPTIONS: "subscriptions",
 } as const;
 
 // ── App config document IDs ─────────────────────────────────────────────────
@@ -85,6 +86,26 @@ export const PaymentStatuses = {
 
 export type PaymentStatus =
   (typeof PaymentStatuses)[keyof typeof PaymentStatuses];
+
+// ── Subscription statuses ───────────────────────────────────────────────────
+export const SubscriptionStatuses = {
+  NONE: "none",
+  CREATED: "created",
+  AUTHENTICATED: "authenticated",
+  ACTIVE: "active",
+  PENDING: "pending",
+  HALTED: "halted",
+  CANCELLED: "cancelled",
+} as const;
+
+export type SubscriptionStatus =
+  (typeof SubscriptionStatuses)[keyof typeof SubscriptionStatuses];
+
+// ── Subscription constants ─────────────────────────────────────────────────
+export const SubscriptionConstants = {
+  PLAN_ID: "plan_Sa5bfCQbjxuUkL",
+  GRACE_PERIOD_DAYS: 3,
+} as const;
 
 // ── Notification types ──────────────────────────────────────────────────────
 export const NotificationTypes = {

@@ -1,16 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart' show FirebaseFirestore, GeoPoint;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import 'package:geocoding/geocoding.dart' as geocoding;
+import 'package:tuish_food/core/constants/api_constants.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
 import 'package:tuish_food/core/widgets/glass_scaffold.dart';
+import 'package:tuish_food/core/widgets/image_picker_field.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_text_field.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
 import 'package:tuish_food/features/restaurant_owner/presentation/providers/restaurant_owner_provider.dart';
+import 'package:tuish_food/features/restaurant_owner/presentation/providers/subscription_provider.dart';
 import 'package:tuish_food/injection_container.dart';
 import 'package:tuish_food/routing/route_paths.dart';
 
@@ -42,9 +47,14 @@ class RestaurantSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
-  final _formKeys = List.generate(3, (_) => GlobalKey<FormState>());
+  static const int _maxSteps = 4;
+  final _formKeys = List.generate(_maxSteps, (_) => GlobalKey<FormState>());
   final _pageController = PageController();
   int _currentStep = 0;
+
+  // Razorpay
+  late final Razorpay _razorpay;
+  String? _createdRestaurantId;
 
   // Step 1: Basic info
   final _nameController = TextEditingController();
@@ -52,6 +62,9 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final Set<String> _selectedCuisines = {};
+  String? _imageUrl;
+  String? _coverImageUrl;
+  late final String _ownerUid;
 
   // Step 2: Address
   final _streetController = TextEditingController();
@@ -67,8 +80,49 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
 
   bool _isSubmitting = false;
 
+  bool _isEditMode = false;
+  int get _totalSteps => _isEditMode ? 3 : 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerUid = ref.read(currentUserProvider)?.uid ?? '';
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
+    // If editing an existing restaurant, populate the form fields
+    final restaurant = ref.read(myRestaurantProvider).value;
+    if (restaurant != null) {
+      _isEditMode = true;
+      _createdRestaurantId = restaurant.id;
+      _nameController.text = restaurant.name;
+      _descriptionController.text = restaurant.description;
+      _imageUrl = restaurant.imageUrl.isEmpty ? null : restaurant.imageUrl;
+      _coverImageUrl =
+          restaurant.coverImageUrl.isEmpty ? null : restaurant.coverImageUrl;
+      _selectedCuisines.addAll(restaurant.cuisineTypes);
+      _streetController.text = restaurant.address.addressLine1;
+      _cityController.text = restaurant.address.city;
+      _stateController.text = restaurant.address.state;
+      _deliveryFeeController.text =
+          restaurant.deliveryFee.toStringAsFixed(0);
+      _minOrderController.text =
+          restaurant.minimumOrderAmount.toStringAsFixed(0);
+      if (restaurant.freeDeliveryAbove > 0) {
+        _freeDeliveryAboveController.text =
+            restaurant.freeDeliveryAbove.toStringAsFixed(0);
+      }
+      _prepTimeController.text =
+          restaurant.preparationTimeMinutes.toString();
+      _isActive = restaurant.isActive;
+    }
+  }
+
   @override
   void dispose() {
+    _razorpay.clear();
     _pageController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
@@ -85,7 +139,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
   }
 
   void _goToStep(int step) {
-    if (step < 0 || step > 2) return;
+    if (step < 0 || step >= _totalSteps) return;
 
     // Validate current step before moving forward.
     if (step > _currentStep) {
@@ -106,15 +160,25 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
     );
   }
 
-  Future<void> _onSubmit() async {
-    if (!_formKeys[_currentStep].currentState!.validate()) return;
-
+  /// Creates the restaurant in Firestore (hidden until subscription activates),
+  /// then creates a Razorpay subscription and opens the checkout.
+  Future<void> _onSubscribeAndCreate() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
+
+    // Prevent creating a second restaurant
+    final existing = ref.read(myRestaurantProvider).value;
+    if (existing != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You already have a restaurant.')),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
+      // 1. Create restaurant with isSubscriptionValid: false
       final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -132,9 +196,11 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
             int.tryParse(_prepTimeController.text) ?? 30,
         'isActive': _isActive,
         'isOpen': _isActive,
-        'imageUrl': '',
-        'coverImageUrl': '',
+        'imageUrl': _imageUrl ?? '',
+        'coverImageUrl': _coverImageUrl ?? '',
         'priceLevel': 1,
+        'isSubscriptionValid': false,
+        'subscriptionStatus': 'none',
         'operatingHours': List.generate(7, (i) {
           const days = [
             'Monday', 'Tuesday', 'Wednesday', 'Thursday',
@@ -149,29 +215,135 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
         }),
       };
 
-      await createRestaurant(ref, data: data);
+      _createdRestaurantId = await createRestaurant(ref, data: data);
+      if (!mounted || _createdRestaurantId == null) return;
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Restaurant created successfully!'),
-          backgroundColor: AppColors.success,
-        ),
+      // 2. Create Razorpay subscription via Cloud Function
+      final subscriptionId = await createSubscription(
+        ref,
+        restaurantId: _createdRestaurantId!,
       );
 
-      context.go(RoutePaths.restaurantDashboard);
+      // 3. Open Razorpay checkout for subscription
+      _razorpay.open({
+        'key': ApiConstants.razorpayKeyId,
+        'subscription_id': subscriptionId,
+        'name': 'Tuish Food',
+        'description': 'Restaurant Monthly Subscription',
+        'theme': {'color': '#FF6B35'},
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to create restaurant: $e'),
+          content: Text('Error: $e'),
           backgroundColor: AppColors.error,
         ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// Save changes to an existing restaurant (edit mode).
+  Future<void> _onSaveChanges() async {
+    if (!_formKeys[_currentStep].currentState!.validate()) return;
+    if (_createdRestaurantId == null) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final data = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'email': _emailController.text.trim(),
+        'cuisineTypes': _selectedCuisines.toList(),
+        'tags': _selectedCuisines.map((c) => c.toLowerCase()).toList(),
+        'address': await _buildAddress(),
+        'deliveryFee': double.tryParse(_deliveryFeeController.text) ?? 0,
+        'minimumOrderAmount': double.tryParse(_minOrderController.text) ?? 0,
+        'freeDeliveryAbove':
+            double.tryParse(_freeDeliveryAboveController.text) ?? 0,
+        'preparationTimeMinutes':
+            int.tryParse(_prepTimeController.text) ?? 30,
+        'isActive': _isActive,
+        'isOpen': _isActive,
+        'imageUrl': _imageUrl ?? '',
+        'coverImageUrl': _coverImageUrl ?? '',
+      };
+
+      await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(_createdRestaurantId!)
+          .update(data);
+
+      ref.invalidate(myRestaurantProvider);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Restaurant updated!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    if (!mounted) return;
+
+    // Optimistically mark subscription as active (webhook may be delayed)
+    if (_createdRestaurantId != null) {
+      await FirebaseFirestore.instance
+          .collection('restaurants')
+          .doc(_createdRestaurantId!)
+          .update({
+        'subscriptionStatus': 'active',
+        'isSubscriptionValid': true,
+      });
+    }
+
+    ref.invalidate(myRestaurantProvider);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Subscription activated! Welcome to Tuish Food.'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+    context.go(RoutePaths.restaurantDashboard);
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Payment failed. You can subscribe later from your profile. '
+          '${response.message ?? ''}',
+        ),
+        backgroundColor: AppColors.error,
+      ),
+    );
+    // Restaurant was created but hidden — owner can subscribe from profile
+    context.go(RoutePaths.restaurantDashboard);
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    // External wallet selected — payment will complete asynchronously
   }
 
   Future<Map<String, dynamic>> _buildAddress() async {
@@ -197,8 +369,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
       'addressLine1': street,
       'city': city,
       'state': state,
-      'latitude': latitude,
-      'longitude': longitude,
+      'location': GeoPoint(latitude, longitude),
     };
   }
 
@@ -207,14 +378,16 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildStepIndicator() {
-    const labels = ['Basic Info', 'Address', 'Operations'];
+    final labels = _isEditMode
+        ? ['Info', 'Address', 'Operations']
+        : ['Info', 'Address', 'Operations', 'Subscribe'];
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSizes.s16,
         vertical: AppSizes.s12,
       ),
       child: Row(
-        children: List.generate(3, (index) {
+        children: List.generate(_totalSteps, (index) {
           final isCompleted = index < _currentStep;
           final isActive = index == _currentStep;
           return Expanded(
@@ -264,7 +437,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
                     ),
                   ],
                 ),
-                if (index < 2 && index > 0)
+                if (index < _totalSteps - 1 && index > 0)
                   const SizedBox.shrink()
                 else if (index == 0)
                   Expanded(
@@ -348,6 +521,38 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
             },
           ),
           const SizedBox(height: AppSizes.s24),
+
+          // Restaurant logo
+          Text('Restaurant Logo', style: AppTypography.labelLarge),
+          const SizedBox(height: AppSizes.s8),
+          Center(
+            child: ImagePickerField(
+              imageUrl: _imageUrl,
+              storagePath: () =>
+                  'restaurants/$_ownerUid/logo_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              label: 'Add Logo',
+              isCircle: true,
+              onUploaded: (url) =>
+                  setState(() => _imageUrl = url.isEmpty ? null : url),
+            ),
+          ),
+          const SizedBox(height: AppSizes.s16),
+
+          // Cover image
+          Text('Cover Image', style: AppTypography.labelLarge),
+          const SizedBox(height: AppSizes.s8),
+          ImagePickerField(
+            imageUrl: _coverImageUrl,
+            storagePath: () =>
+                'restaurants/$_ownerUid/cover_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            label: 'Add Cover Photo',
+            isCircle: false,
+            aspectRatio: 16 / 9,
+            onUploaded: (url) =>
+                setState(() => _coverImageUrl = url.isEmpty ? null : url),
+          ),
+          const SizedBox(height: AppSizes.s24),
+
           Text('Cuisine Types', style: AppTypography.labelLarge),
           const SizedBox(height: AppSizes.s8),
           Wrap(
@@ -555,13 +760,98 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
     );
   }
 
+  Widget _buildStep4Subscribe() {
+    return Form(
+      key: _formKeys[3],
+      child: ListView(
+        padding: AppSizes.paddingAllM,
+        children: [
+          const SizedBox(height: AppSizes.s16),
+          Icon(
+            Icons.workspace_premium_rounded,
+            size: 64,
+            color: AppColors.warning,
+          ),
+          const SizedBox(height: AppSizes.s16),
+          Text(
+            'Activate Your Restaurant',
+            style: AppTypography.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.s8),
+          Text(
+            'Subscribe to make your restaurant visible to customers '
+            'and start receiving orders.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.s32),
+          Container(
+            padding: const EdgeInsets.all(AppSizes.s24),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.primary),
+              borderRadius: BorderRadius.circular(AppSizes.radiusL),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Monthly Plan',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.s8),
+                Text(
+                  'Auto-renews monthly. Cancel anytime.',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.s16),
+                const Divider(),
+                const SizedBox(height: AppSizes.s12),
+                _buildPlanFeature(Icons.storefront, 'Listed on Tuish Food'),
+                _buildPlanFeature(Icons.shopping_bag, 'Receive customer orders'),
+                _buildPlanFeature(Icons.analytics, 'Dashboard & analytics'),
+                _buildPlanFeature(Icons.delivery_dining, 'Delivery partner matching'),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSizes.s24),
+          Text(
+            'You can also subscribe later from your restaurant profile.',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textHint,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlanFeature(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.success),
+          const SizedBox(width: AppSizes.s12),
+          Text(text, style: AppTypography.bodyMedium),
+        ],
+      ),
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Navigation buttons
   // ---------------------------------------------------------------------------
 
   Widget _buildNavigationButtons() {
     final isFirstStep = _currentStep == 0;
-    final isLastStep = _currentStep == 2;
+    final isLastStep = _currentStep == _totalSteps - 1;
 
     return Padding(
       padding: const EdgeInsets.all(AppSizes.s16),
@@ -578,9 +868,13 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
           Expanded(
             child: isLastStep
                 ? TuishButton.primary(
-                    label: 'Submit',
+                    label: _isEditMode ? 'Save Changes' : 'Subscribe & Create',
                     isLoading: _isSubmitting,
-                    onPressed: _isSubmitting ? null : _onSubmit,
+                    onPressed: _isSubmitting
+                        ? null
+                        : _isEditMode
+                            ? _onSaveChanges
+                            : _onSubscribeAndCreate,
                   )
                 : TuishButton.primary(
                     label: 'Next',
@@ -599,7 +893,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
-      appBar: const TuishAppBar(title: 'Restaurant Setup'),
+      appBar: TuishAppBar(title: _isEditMode ? 'Edit Restaurant' : 'Restaurant Setup'),
       body: Column(
         children: [
           _buildStepIndicator(),
@@ -612,6 +906,7 @@ class _RestaurantSetupScreenState extends ConsumerState<RestaurantSetupScreen> {
                 _buildStep1BasicInfo(),
                 _buildStep2Address(),
                 _buildStep3Operations(),
+                if (!_isEditMode) _buildStep4Subscribe(),
               ],
             ),
           ),

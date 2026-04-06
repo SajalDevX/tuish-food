@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tuish_food/core/constants/app_colors.dart';
 import 'package:tuish_food/core/constants/app_sizes.dart';
 import 'package:tuish_food/core/constants/app_typography.dart';
+import 'package:tuish_food/core/widgets/image_picker_field.dart';
 import 'package:tuish_food/core/widgets/loading_overlay.dart';
 import 'package:tuish_food/core/widgets/tuish_app_bar.dart';
 import 'package:tuish_food/core/widgets/tuish_button.dart';
@@ -29,7 +30,7 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
   final _priceController = TextEditingController();
   final _discountedPriceController = TextEditingController();
   final _prepTimeController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+  String? _imageUrl;
   bool _isVeg = true;
   bool _isAvailable = true;
   bool _isLoading = true;
@@ -74,7 +75,8 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
       }
       _prepTimeController.text =
           (data['preparationTimeMinutes'] as num?)?.toString() ?? '';
-      _imageUrlController.text = data['imageUrl'] as String? ?? '';
+      final rawUrl = data['imageUrl'] as String? ?? '';
+      _imageUrl = rawUrl.isEmpty ? null : rawUrl;
       _isVeg = data['isVegetarian'] as bool? ?? true;
       _isAvailable = data['isAvailable'] as bool? ?? true;
       _selectedCategory = data['categoryId'] as String?;
@@ -96,7 +98,6 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
     _priceController.dispose();
     _discountedPriceController.dispose();
     _prepTimeController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -126,7 +127,7 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
           'discountedPrice': FieldValue.delete(),
         'isVegetarian': _isVeg,
         'isAvailable': _isAvailable,
-        'imageUrl': _imageUrlController.text.trim(),
+        'imageUrl': _imageUrl ?? '',
         'preparationTimeMinutes':
             int.tryParse(_prepTimeController.text.trim()) ?? 15,
       });
@@ -227,10 +228,20 @@ class _EditMenuItemScreenState extends ConsumerState<EditMenuItemScreen> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: AppSizes.s12),
-              TuishTextField(
-                controller: _imageUrlController,
-                label: 'Image URL',
-                keyboardType: TextInputType.url,
+              Text('Item Photo', style: AppTypography.labelLarge),
+              const SizedBox(height: AppSizes.s8),
+              ImagePickerField(
+                imageUrl: _imageUrl,
+                storagePath: () {
+                  final restaurantId =
+                      ref.read(myRestaurantIdProvider) ?? 'unknown';
+                  return 'restaurants/$restaurantId/menu_items/${DateTime.now().millisecondsSinceEpoch}.jpg';
+                },
+                label: 'Change Photo',
+                isCircle: false,
+                aspectRatio: 1.0,
+                onUploaded: (url) =>
+                    setState(() => _imageUrl = url.isEmpty ? null : url),
               ),
               const SizedBox(height: AppSizes.s16),
               Row(
